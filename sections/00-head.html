@@ -29,10 +29,12 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="assets/styles.css" />
-  <link rel="stylesheet" href="assets/css/diagram.css" />
+  <!-- ?v=__CSSVER__ is a content-hash cache-buster stamped by build.sh so a
+       browser can never serve a stale stylesheet after a CSS change. -->
+  <link rel="stylesheet" href="assets/styles.css?v=__CSSVER__" />
+  <link rel="stylesheet" href="assets/css/diagram.css?v=__CSSVER__" />
 
   <!-- module JS is self-contained; deferred so it never blocks first paint -->
-  <script type="module" src="assets/js/main.js"></script>
+  <script type="module" src="assets/js/main.js?v=__CSSVER__"></script>
 </head>
 <body>

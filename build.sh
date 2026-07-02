@@ -43,5 +43,16 @@ for p in "${PARTS[@]}"; do
   printf '\n' >> "$TMP"
 done
 
+# Cache-buster: a short content hash of the assets the HTML links. Stamped into
+# every "?v=__CSSVER__" placeholder so the version only changes when an asset
+# changes — forcing browsers to re-fetch CSS/JS instead of serving a stale copy.
+CSSVER="$(cat assets/styles.css assets/css/diagram.css assets/js/*.js 2>/dev/null | shasum | cut -c1-10)"
+# portable in-place edit (BSD/macOS + GNU sed)
+if sed --version >/dev/null 2>&1; then
+  sed -i "s/__CSSVER__/${CSSVER}/g" "$TMP"
+else
+  sed -i '' "s/__CSSVER__/${CSSVER}/g" "$TMP"
+fi
+
 mv "$TMP" "$OUT"
-echo "build.sh: wrote $OUT from ${#PARTS[@]} partials."
+echo "build.sh: wrote $OUT from ${#PARTS[@]} partials (asset version ${CSSVER})."

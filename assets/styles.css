@@ -294,7 +294,9 @@ section { padding: 64px 0; border-bottom: 1px solid var(--border-soft); }
   color: #0b1020; background: var(--c, var(--cyan));
   box-shadow: 0 0 0 4px var(--bg);
 }
-@media (max-width: 640px){ .project > .idx { width: 24px; height: 24px; font-size: 11px; border-radius: 7px; } }
+/* the badge now holds a type icon instead of a number */
+.project > .idx svg { width: 17px; height: 17px; display: block; color: #0b1020; }
+@media (max-width: 640px){ .project > .idx { width: 24px; height: 24px; font-size: 11px; border-radius: 7px; } .project > .idx svg { width: 13px; height: 13px; } }
 .project:nth-of-type(1)  { --c: var(--pink); }
 .project:nth-of-type(2)  { --c: var(--pink); }
 .project:nth-of-type(3)  { --c: var(--pink); }
@@ -334,6 +336,15 @@ section { padding: 64px 0; border-bottom: 1px solid var(--border-soft); }
   margin-bottom: 18px;
 }
 .project .role strong { color: var(--text); }
+/* a small in-section sub-heading (e.g. "What I owned") */
+.sub-h {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  margin: 26px 0 4px;
+}
 .tag {
   display: inline-block;
   transition: transform .15s ease, filter .15s ease;
@@ -396,6 +407,42 @@ section { padding: 64px 0; border-bottom: 1px solid var(--border-soft); }
   gap: 16px;
 }
 @media (max-width: 720px) { .grid-2 { grid-template-columns: 1fr; } }
+
+/* PULL / PUSH ingestion-path tags used in the lineage card headers */
+.path-tag {
+  display: inline-block; vertical-align: middle;
+  font-family: var(--mono); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.08em; border-radius: 5px; padding: 1px 6px;
+  margin-right: 8px; transform: translateY(-1px);
+}
+.path-tag.pull { color: var(--cyan);  background: rgba(56,189,248,0.14);  border: 1px solid rgba(56,189,248,0.4); }
+.path-tag.push { color: var(--amber); background: rgba(251,191,36,0.14);  border: 1px solid rgba(251,191,36,0.4); }
+
+/* a full-width "guardrails" card with a concrete, enumerated list */
+.card.guardrails { border-left-color: var(--emerald); }
+.card.guardrails h4 { color: var(--emerald); }
+.glist { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 12px; }
+.glist li {
+  position: relative; padding-left: 30px;
+  color: var(--text-dim); line-height: 1.55;
+}
+.glist li::before {
+  content: "\2713"; position: absolute; left: 0; top: 1px;
+  width: 19px; height: 19px; border-radius: 6px;
+  display: grid; place-items: center;
+  font-family: var(--mono); font-size: 11px; font-weight: 700; line-height: 1;
+  color: var(--emerald);
+  background: color-mix(in srgb, var(--emerald) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--emerald) 42%, transparent);
+}
+.glist li b { color: var(--text); font-weight: 700; }
+/* inline code chips used in cards / lists */
+.card code, .glist code {
+  font-family: var(--mono); font-size: .84em;
+  background: rgba(255,255,255,.05); border: 1px solid var(--border-soft);
+  border-radius: 5px; padding: 1px 5px; color: var(--text);
+  white-space: nowrap;
+}
 
 /* diagrams / wide content scroll inside their own box (legacy escape hatch) */
 .scroll-x {

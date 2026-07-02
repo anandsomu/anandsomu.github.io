@@ -1,6 +1,6 @@
         <!-- ========== 01 · Agentic shuttle-booking agent (MoveInSync) ========== -->
         <article class="project reveal" id="p-agent">
-          <span class="idx">01</span>
+          <span class="idx"><svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-ai"/></svg></span>
           <span class="company">MoveInSync</span>
           <h3><span class="grad">Deterministic AI Booking Agent</span>: Bringing Conversational Shuttles to Production Scale</h3>
           <p class="role">Employees <strong>book, cancel and track shuttles in plain language</strong> on Teams / Slack / WhatsApp — and it feels as fast as the app.</p>
@@ -102,6 +102,21 @@
                 </div>
               </div>
 
+              <div class="vconn guard"><span class="rail"></span><span class="lbl">the write path — every booking passes through here</span><span class="chev"></span></div>
+
+              <div class="vnode guard">
+                <div class="vhead">
+                  <span class="ico"><svg><use href="#i-review"/></svg></span>
+                  <span class="vtitle"><span class="ttl">Guardrail gate</span><span class="sub">enforced in code · not a prompt</span></span>
+                  <span class="more"></span>
+                </div>
+                <div class="vdetail"><div class="vdetail-in">
+                  <p><strong>Nothing writes without clearing these.</strong> The flow engine — not the model — enforces the write-path checks, so they hold even when the LLM is wrong:</p>
+                  <div class="kv"><span>explicit "yes" + all slots</span><span>idempotency key</span><span>check_existing_booking</span><span>templated summary</span></div>
+                  <p>The confirmation summary is <strong>template-rendered from the API result, not LLM-generated</strong> — so the exact text that gates a write can't be hallucinated. Even the one-tap "book my usual" fast path re-confirms; there is no silent auto-booking.</p>
+                </div></div>
+              </div>
+
               <div class="vconn client"><span class="rail"></span><span class="lbl">templated reply — no LLM</span><span class="chev"></span></div>
 
               <div class="vnode client">
@@ -111,7 +126,7 @@
                   <span class="more"></span>
                 </div>
                 <div class="vdetail"><div class="vdetail-in">
-                  <p><strong>Phrased, not generated.</strong> The reply is a template filled from the REST results — no second LLM call — so the round-trip stays fast. A <strong>guardrails layer</strong> still requires explicit confirmation before any write, even on the one-tap "book my usual" path.</p>
+                  <p><strong>Phrased, not generated.</strong> The reply is a template filled from the REST results — no second LLM call — so the round-trip stays fast. Only after the guardrail gate above clears does the write execute.</p>
                 </div></div>
               </div>
 
@@ -121,26 +136,41 @@
               <span class="li"><span class="sw svc"></span>agent / service</span>
               <span class="li"><span class="sw cache"></span>Redis cache</span>
               <span class="li"><span class="sw ai"></span>LLM</span>
+              <span class="li"><span class="sw guard"></span>guardrail</span>
             </div>
           </figure>
 
           <div class="grid-2">
             <div class="card">
-              <h4>Tool layer &amp; guardrails</h4>
+              <h4>Tool layer</h4>
               <p class="muted">
-                A custom agent loop wraps the Shuttle REST APIs as <strong>typed tool definitions</strong>. A <strong>guardrails layer</strong>
-                requires explicit user confirmation before <em>any</em> write — no silent auto-booking, even on the one-tap "book my usual" fast path.
-                Tenant identity (BUID) is injected by the auth proxy and never enters the model context; idempotency keys make a double-tap safe.
+                The Shuttle REST APIs are wrapped as <strong>typed tool definitions</strong>, each explicitly classified <strong>read</strong> or
+                <strong>write</strong>. Reads (<code>get_shifts</code>, <code>get_routes</code>, holidays/cutoffs, <code>check_existing_booking</code>)
+                fan out in parallel; writes (<code>create_booking</code>, <code>cancel_booking</code>, payment) only fire through the guardrail gate below.
+                A <strong>response simplifier</strong> strips verbose API JSON before it ever reaches the model context, cutting tokens.
               </p>
             </div>
             <div class="card">
               <h4>Scale &amp; extend</h4>
               <p class="muted">
                 Pods are <strong>stateless</strong> with all conversation state in <strong>Redis</strong> — horizontal scale on Kubernetes with an HPA.
-                A <strong>response simplifier</strong> keeps verbose API JSON out of the model context to cut tokens. New capabilities drop in as
-                <strong>capability packs</strong> behind an intent router. If the LLM is slow, it degrades to a zero-inference menu UX; the app is always the escape hatch.
+                New capabilities drop in as <strong>capability packs</strong> behind an intent router. If the LLM is slow or down, it degrades to a
+                zero-inference menu UX; the app is always the escape hatch.
               </p>
             </div>
+          </div>
+
+          <div class="card guardrails">
+            <h4>Guardrails — the specific things that stop a bad write</h4>
+            <p class="muted">Enforced in <strong>code by the flow engine</strong>, not by a prompt instruction — so they hold even when the model is wrong.</p>
+            <ul class="glist">
+              <li><b>Confirmation gate on every write.</b> <code>create_booking</code>, <code>cancel_booking</code> and payment never execute without an explicit "yes" <em>and</em> all required slots present. Even the one-tap "book my usual" fast path re-confirms — there is no silent auto-booking.</li>
+              <li><b>Deterministic, templated confirmations.</b> The summary a user approves is <em>template-rendered from the API result, not LLM-generated</em> — so the exact text that gates a write can't be hallucinated or drift.</li>
+              <li><b>Idempotency on writes.</b> A session-scoped idempotency key on <code>create_booking</code> (paired with a <code>check_existing_booking</code> read) means a retry or double-tap never double-books.</li>
+              <li><b>Tenant isolation.</b> Every tool call carries the injected <code>BUID</code>, enforced server-side by a <code>BuidInterceptor</code>. Tenant identity <strong>never enters the model context</strong>, and no PII or internal IDs are echoed back to the user.</li>
+              <li><b>Scope limiter.</b> Off-domain requests resolve to an <code>OUT_OF_SCOPE</code> intent and get a polite decline instead of an improvised answer.</li>
+              <li><b>Structural loop prevention.</b> The deterministic engine can't infinite-loop — there is no LLM-driven tool selection on the hot path — and the rare open-ended ReAct fallback keeps a hard step cap.</li>
+            </ul>
           </div>
 
           <div class="tradeoff">

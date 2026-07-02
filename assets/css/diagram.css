@@ -69,7 +69,7 @@
   --c: var(--cyan);
   position: relative;
   width: 100%;
-  max-width: 560px;
+  max-width: 880px;
   background: var(--bg-card);
   border: 1.5px solid var(--border-soft);
   border-left: 4px solid var(--c);
@@ -95,9 +95,13 @@
 }
 .vnode .ico svg { width: 26px; height: 26px; display: block; color: var(--c); }
 .vnode .ico .blogo { width: 26px; height: 26px; }
-.vnode .vtitle { min-width: 0; }
+.vnode .vtitle { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .vnode .ttl { font-weight: 700; font-size: 15px; color: var(--text); line-height: 1.25; }
-.vnode .sub { font-size: 12px; color: var(--text-dim); font-family: var(--mono); line-height: 1.35; margin-top: 2px; }
+/* meta sits on its OWN line under the title — never runs into it */
+.vnode .sub {
+  font-size: 12px; color: var(--text-dim); font-family: var(--mono); line-height: 1.35;
+  padding-top: 4px; border-top: 1px solid var(--border-soft);
+}
 /* the "tap for detail" chevron affordance */
 .vnode .more {
   width: 26px; height: 26px; border-radius: 50%;
@@ -177,9 +181,9 @@
   border-radius: 2px;
 }
 .vconn .lbl {
-  font-family: var(--mono); font-size: 10.5px; color: var(--text-dim);
+  font-family: var(--mono); font-size: 11px; line-height: 1.3; color: var(--text-dim);
   background: rgba(255,255,255,.03); border: 1px solid var(--border-soft);
-  border-radius: 999px; padding: 2px 10px; text-align: center; max-width: 90%;
+  border-radius: 999px; padding: 3px 12px; text-align: center; max-width: 92%;
 }
 .vconn .chev { color: var(--c); font-size: 13px; line-height: 1; margin-top: -1px; }
 .vconn .chev::before { content: "▾"; }
@@ -193,13 +197,14 @@
 .vnode.queue,  .vconn.queue  { --c: var(--amber); }
 .vnode.gw,     .vconn.gw     { --c: var(--indigo); }
 .vnode.geo,    .vconn.geo    { --c: var(--teal); }
+.vnode.guard,  .vconn.guard  { --c: var(--emerald); }
 
 /* a FORK: two-or-more branches side by side beneath one node,
    used for parallel reads (shuttle) and multi-consumer fan-out (geo).
    Each branch is a mini vertical column; wraps to stack on narrow. */
 .vfork {
   width: 100%;
-  max-width: 640px;
+  max-width: 880px;
   border: 1px dashed var(--c, var(--cyan));
   background: color-mix(in srgb, var(--c, var(--cyan)) 4%, transparent);
   border-radius: 14px;
@@ -212,10 +217,63 @@
 }
 .vfork .branches {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
 }
+/* branch cards fill their grid cell — labels get room to read on one line */
 .vfork .branches .vnode { max-width: none; }
+/* branch cards carry only a short label — drop the "+" affordance and the
+   extra grid track so the LABEL gets the full remaining width (no per-word
+   wrapping). The whole card is still click/hover-to-expand via JS. */
+.vfork .branches .vnode .vhead { grid-template-columns: 40px 1fr; gap: 12px; }
+.vfork .branches .vnode .more { display: none; }
+.vfork .branches .vnode .ico { width: 40px; height: 40px; }
+.vfork .branches .vnode .ttl { font-size: 14.5px; }
+
+/* ============================================================
+   EVO — a horizontal "iteration / evolution" stepper. Each stage
+   is a card (ordinal + icon + name + one-line note) connected by
+   arrows. Stacks vertically on narrow screens.
+   ============================================================ */
+.evo {
+  list-style: none; margin: 6px 0 0; padding: 6px 0 0;
+  display: flex; align-items: stretch; justify-content: center;
+  gap: 10px; flex-wrap: wrap;
+}
+.evo .evo-step {
+  --c: var(--teal);
+  position: relative;
+  flex: 1 1 210px; max-width: 260px;
+  background: var(--bg-card);
+  border: 1.5px solid var(--border-soft);
+  border-top: 3px solid var(--c);
+  border-radius: 14px;
+  padding: 18px 16px 15px;
+  text-align: center;
+}
+.evo .evo-step.final { --c: var(--red); box-shadow: 0 12px 30px -22px var(--c); }
+.evo .evo-ord {
+  position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+  width: 23px; height: 23px; border-radius: 50%;
+  display: grid; place-items: center;
+  font-family: var(--mono); font-size: 11px; font-weight: 700;
+  color: #0b1020; background: var(--c);
+}
+.evo .evo-ico { display: grid; place-items: center; height: 34px; margin: 4px 0 9px; }
+.evo .evo-ico svg { width: 30px; height: 30px; color: var(--c); }
+.evo .evo-ico .blogo { width: 28px; height: 28px; }
+.evo .evo-name { display: block; font-weight: 700; color: var(--text); font-size: 15px; line-height: 1.25; }
+.evo .evo-name .plus { display: block; color: var(--text-dim); font-weight: 500; font-size: 12.5px; font-family: var(--mono); margin-top: 3px; }
+.evo .evo-note { display: block; margin-top: 8px; font-size: 12px; color: var(--text-dim); font-family: var(--mono); line-height: 1.4; }
+.evo .evo-arrow {
+  display: grid; place-items: center; flex: 0 0 auto; align-self: center;
+  color: var(--text-faint); font-size: 20px; line-height: 1;
+}
+@media (max-width: 560px) {
+  .evo { flex-direction: column; align-items: stretch; }
+  .evo .evo-step { max-width: none; }
+  .evo .evo-arrow { transform: rotate(90deg); padding: 2px 0; }
+}
 
 /* DEVICE POPULATION visual — the ~100K ping source, made tangible:
    two device families (fixed vehicle units + driver mobile) that
@@ -311,6 +369,7 @@
 .legend .sw.queue { border-color: var(--amber);  background: rgba(251,191,36,0.18); }
 .legend .sw.gw    { border-color: var(--indigo); background: rgba(129,140,248,0.18); }
 .legend .sw.geo   { border-color: var(--teal);   background: rgba(45,212,191,0.18); }
+.legend .sw.guard { border-color: var(--emerald);background: rgba(52,211,153,0.18); }
 
 /* a subtle "interactive" hint above the first diagram of a project */
 .diag-hint {

@@ -29,11 +29,13 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="assets/styles.css" />
-  <link rel="stylesheet" href="assets/css/diagram.css" />
+  <!-- ?v=92f256f064 is a content-hash cache-buster stamped by build.sh so a
+       browser can never serve a stale stylesheet after a CSS change. -->
+  <link rel="stylesheet" href="assets/styles.css?v=92f256f064" />
+  <link rel="stylesheet" href="assets/css/diagram.css?v=92f256f064" />
 
   <!-- module JS is self-contained; deferred so it never blocks first paint -->
-  <script type="module" src="assets/js/main.js"></script>
+  <script type="module" src="assets/js/main.js?v=92f256f064"></script>
 </head>
 <body>
 
@@ -145,18 +147,18 @@
     <div class="wrap">
       <div class="hero-lead">
           <div class="eyebrow">Distributed systems · Real-time · Event-driven · Agentic AI · Technical leadership</div>
-          <h1>Distributed systems that hold up <span class="grad">when the load shows up.</span></h1>
+          <h1>Designing high-scale distributed systems that <span class="grad">don't flinch at peak traffic.</span></h1>
           <p class="lede">
-            I'm Anand — I design and build distributed systems, and spend most of my time on the parts that get tested at peak.
-            A geospatial pipeline that turns <strong>~1M GPS pings a minute</strong> into ETAs riders can trust,
-            event-driven platforms that stay up at <strong>~10&times; load</strong>, and
-            <span class="sig">agentic AI running in production</span>. I tend to reach for a better <em>work model</em>
-            before a bigger box, and I like shipping migrations that nobody notices.
+            I'm Anand&mdash;I design and build distributed systems, focusing on the core infrastructure pushed to its limits at peak traffic.
+            Over my career, I've delivered a geospatial pipeline converting <strong>~1M GPS pings a minute</strong> into highly accurate ETAs,
+            built event-driven platforms that gracefully sustain <strong>~10&times; load</strong> surges, and
+            deployed <span class="sig">production-grade conversational AI agents</span>. I always reach for an optimized architectural pattern
+            before a bigger box, prioritizing seamless, zero-downtime migrations.
           </p>
           <p class="lede lede-lead">
-            I do this as a <span class="sig">hands-on technical lead</span> — I own designs end to end, split the work and lead
-            the engineers on it, run the design reviews, and bring people along on the way. I still write the code; I'd just
-            rather the whole team ship it well than be the only one who understands it.
+            I do this as a <span class="sig">hands-on technical lead</span>. I own system designs end-to-end, break down complex architectures
+            into executable milestones, and mentor engineers through rigorous design reviews. While I still actively write code, my ultimate goal
+            is to elevate the team's collective engineering capability so that high-quality shipping becomes a shared standard, not a single point of failure.
           </p>
           <div class="cta-row">
             <a class="btn primary" href="https://www.linkedin.com/in/anandsomu" target="_blank" rel="noopener">
@@ -174,7 +176,7 @@
         <div class="stat"><div class="num" data-count="450" data-suffix="K/day" data-prefix="~">~450K/day</div><div class="lbl">booking requests — nearly half a million</div></div>
         <div class="stat"><div class="num" data-count="1" data-suffix="M/min" data-prefix="~">~1M/min</div><div class="lbl">GPS pings driving live ETAs</div></div>
         <div class="stat"><div class="num" data-static="2.5s → 400ms">2.5s → 400ms</div><div class="lbl">ETA p95, legacy path vs the pipeline I built</div></div>
-        <div class="stat"><div class="num" data-count="10" data-suffix="&times;" data-prefix="~">~10&times;</div><div class="lbl">peak load absorbed without meltdown</div></div>
+        <div class="stat"><div class="num" data-count="10" data-suffix="&times;" data-prefix="~">~10&times;</div><div class="lbl">peak load absorbed with zero degradation</div></div>
       </div>
     </div>
   </header>
@@ -196,7 +198,7 @@
 
         <!-- ========== 01 · Agentic shuttle-booking agent (MoveInSync) ========== -->
         <article class="project reveal" id="p-agent">
-          <span class="idx">01</span>
+          <span class="idx"><svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-ai"/></svg></span>
           <span class="company">MoveInSync</span>
           <h3><span class="grad">Deterministic AI Booking Agent</span>: Bringing Conversational Shuttles to Production Scale</h3>
           <p class="role">Employees <strong>book, cancel and track shuttles in plain language</strong> on Teams / Slack / WhatsApp — and it feels as fast as the app.</p>
@@ -298,6 +300,21 @@
                 </div>
               </div>
 
+              <div class="vconn guard"><span class="rail"></span><span class="lbl">the write path — every booking passes through here</span><span class="chev"></span></div>
+
+              <div class="vnode guard">
+                <div class="vhead">
+                  <span class="ico"><svg><use href="#i-review"/></svg></span>
+                  <span class="vtitle"><span class="ttl">Guardrail gate</span><span class="sub">enforced in code · not a prompt</span></span>
+                  <span class="more"></span>
+                </div>
+                <div class="vdetail"><div class="vdetail-in">
+                  <p><strong>Nothing writes without clearing these.</strong> The flow engine — not the model — enforces the write-path checks, so they hold even when the LLM is wrong:</p>
+                  <div class="kv"><span>explicit "yes" + all slots</span><span>idempotency key</span><span>check_existing_booking</span><span>templated summary</span></div>
+                  <p>The confirmation summary is <strong>template-rendered from the API result, not LLM-generated</strong> — so the exact text that gates a write can't be hallucinated. Even the one-tap "book my usual" fast path re-confirms; there is no silent auto-booking.</p>
+                </div></div>
+              </div>
+
               <div class="vconn client"><span class="rail"></span><span class="lbl">templated reply — no LLM</span><span class="chev"></span></div>
 
               <div class="vnode client">
@@ -307,7 +324,7 @@
                   <span class="more"></span>
                 </div>
                 <div class="vdetail"><div class="vdetail-in">
-                  <p><strong>Phrased, not generated.</strong> The reply is a template filled from the REST results — no second LLM call — so the round-trip stays fast. A <strong>guardrails layer</strong> still requires explicit confirmation before any write, even on the one-tap "book my usual" path.</p>
+                  <p><strong>Phrased, not generated.</strong> The reply is a template filled from the REST results — no second LLM call — so the round-trip stays fast. Only after the guardrail gate above clears does the write execute.</p>
                 </div></div>
               </div>
 
@@ -317,26 +334,41 @@
               <span class="li"><span class="sw svc"></span>agent / service</span>
               <span class="li"><span class="sw cache"></span>Redis cache</span>
               <span class="li"><span class="sw ai"></span>LLM</span>
+              <span class="li"><span class="sw guard"></span>guardrail</span>
             </div>
           </figure>
 
           <div class="grid-2">
             <div class="card">
-              <h4>Tool layer &amp; guardrails</h4>
+              <h4>Tool layer</h4>
               <p class="muted">
-                A custom agent loop wraps the Shuttle REST APIs as <strong>typed tool definitions</strong>. A <strong>guardrails layer</strong>
-                requires explicit user confirmation before <em>any</em> write — no silent auto-booking, even on the one-tap "book my usual" fast path.
-                Tenant identity (BUID) is injected by the auth proxy and never enters the model context; idempotency keys make a double-tap safe.
+                The Shuttle REST APIs are wrapped as <strong>typed tool definitions</strong>, each explicitly classified <strong>read</strong> or
+                <strong>write</strong>. Reads (<code>get_shifts</code>, <code>get_routes</code>, holidays/cutoffs, <code>check_existing_booking</code>)
+                fan out in parallel; writes (<code>create_booking</code>, <code>cancel_booking</code>, payment) only fire through the guardrail gate below.
+                A <strong>response simplifier</strong> strips verbose API JSON before it ever reaches the model context, cutting tokens.
               </p>
             </div>
             <div class="card">
               <h4>Scale &amp; extend</h4>
               <p class="muted">
                 Pods are <strong>stateless</strong> with all conversation state in <strong>Redis</strong> — horizontal scale on Kubernetes with an HPA.
-                A <strong>response simplifier</strong> keeps verbose API JSON out of the model context to cut tokens. New capabilities drop in as
-                <strong>capability packs</strong> behind an intent router. If the LLM is slow, it degrades to a zero-inference menu UX; the app is always the escape hatch.
+                New capabilities drop in as <strong>capability packs</strong> behind an intent router. If the LLM is slow or down, it degrades to a
+                zero-inference menu UX; the app is always the escape hatch.
               </p>
             </div>
+          </div>
+
+          <div class="card guardrails">
+            <h4>Guardrails — the specific things that stop a bad write</h4>
+            <p class="muted">Enforced in <strong>code by the flow engine</strong>, not by a prompt instruction — so they hold even when the model is wrong.</p>
+            <ul class="glist">
+              <li><b>Confirmation gate on every write.</b> <code>create_booking</code>, <code>cancel_booking</code> and payment never execute without an explicit "yes" <em>and</em> all required slots present. Even the one-tap "book my usual" fast path re-confirms — there is no silent auto-booking.</li>
+              <li><b>Deterministic, templated confirmations.</b> The summary a user approves is <em>template-rendered from the API result, not LLM-generated</em> — so the exact text that gates a write can't be hallucinated or drift.</li>
+              <li><b>Idempotency on writes.</b> A session-scoped idempotency key on <code>create_booking</code> (paired with a <code>check_existing_booking</code> read) means a retry or double-tap never double-books.</li>
+              <li><b>Tenant isolation.</b> Every tool call carries the injected <code>BUID</code>, enforced server-side by a <code>BuidInterceptor</code>. Tenant identity <strong>never enters the model context</strong>, and no PII or internal IDs are echoed back to the user.</li>
+              <li><b>Scope limiter.</b> Off-domain requests resolve to an <code>OUT_OF_SCOPE</code> intent and get a polite decline instead of an improvised answer.</li>
+              <li><b>Structural loop prevention.</b> The deterministic engine can't infinite-loop — there is no LLM-driven tool selection on the hot path — and the rare open-ended ReAct fallback keeps a hard step cap.</li>
+            </ul>
           </div>
 
           <div class="tradeoff">
@@ -352,7 +384,7 @@
 
         <!-- ========== 02 · Real-time geofencing & ETA pipeline (MoveInSync) — the deep one ========== -->
         <article class="project reveal" id="p-geofencing">
-          <span class="idx">02</span>
+          <span class="idx"><svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-geo"/></svg></span>
           <h3>Real-time <span class="grad">geofencing</span> pipeline — <span class="grad">~1M GPS pings a minute</span></h3>
           <p class="role">The distributed system I'm proudest of: a pipeline that ingests a firehose of vehicle GPS and turns it into ground truth — where a shuttle is, whether it's on its intended route, and whether employees reached safely. Across <strong>~100K devices</strong> and <strong>~100K geofences</strong>, without melting the fleet backend.</p>
 
@@ -735,7 +767,7 @@
 
         <!-- ========== 3 · LLM operational analytics (MoveInSync) ========== -->
         <article class="project reveal">
-          <span class="idx">03</span>
+          <span class="idx"><svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-review"/></svg></span>
           <h3>LLM-powered operational analytics — ask the fleet a question in English</h3>
           <p class="role">Natural-language querying over historical trip, fleet and booking data — operational questions answered in plain English instead of hand-written reports.</p>
           <div class="card">
@@ -752,7 +784,7 @@
 
         <!-- ========== 5 · Indoor navigation (MoveInSync) ========== -->
         <article class="project reveal">
-          <span class="idx">04</span>
+          <span class="idx"><svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-gw"/></svg></span>
           <h3>Indoor navigation — graph shortest-path over a building's route network</h3>
           <p class="role">Turn-by-turn indoor routing on a graph database, serving real daily traffic with far faster path computation.</p>
           <div class="card">
@@ -767,7 +799,7 @@
 
         <!-- ========== 6 · Calendar service + safety/compliance (MoveInSync) ========== -->
         <article class="project reveal">
-          <span class="idx">05</span>
+          <span class="idx"><svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-clock"/></svg></span>
           <h3>Centralized Calendar Service, plus a safety &amp; compliance engine</h3>
           <p class="role">Scheduling coordination for the fleet, and enforcement that keeps non-compliant vehicles and vulnerable riders off the road.</p>
           <div class="grid-2">
@@ -791,7 +823,7 @@
 
         <!-- ========== 7 · Fault-tolerant banking middleware (Interface.ai) ========== -->
         <article class="project reveal">
-          <span class="idx">06</span>
+          <span class="idx"><svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-bell"/></svg></span>
           <span class="company">Interface.ai</span>
           <h3>Fault-tolerant banking middleware, and observability that cut response time</h3>
           <p class="role">Intelligent virtual-assistant platform for US banks and credit unions, integrating many third-party banking providers.</p>
@@ -813,7 +845,7 @@
 
         <!-- ========== 8 · Event-driven webhooks & public APIs (Instamojo) ========== -->
         <article class="project reveal">
-          <span class="idx">07</span>
+          <span class="idx"><svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-svc"/></svg></span>
           <span class="company">Instamojo</span>
           <h3>Event-driven webhooks &amp; public APIs — an SME commerce integration layer</h3>
           <p class="role">The integration backbone of a commerce platform for small businesses, hardened for high-traffic sale events.</p>
@@ -838,7 +870,7 @@
 
         <!-- ========== 9 · Retail replenishment pipelines (Blue Yonder) ========== -->
         <article class="project reveal">
-          <span class="idx">08</span>
+          <span class="idx"><svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-clock"/></svg></span>
           <span class="company">Blue Yonder</span>
           <h3>Retail replenishment pipelines that crunch forecast data at scale</h3>
           <p class="role">LSF (Retail Store Replenishment) — inventory planning and supply-chain pipelines for global retailers.</p>
@@ -855,10 +887,14 @@
 
         <!-- ========== 09 · Graph data-lineage / PowerMe (Enquero) ========== -->
         <article class="project reveal">
-          <span class="idx">09</span>
+          <span class="idx"><svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-gw"/></svg></span>
           <span class="company">Enquero <span class="ctx">· acquired by Genpact</span></span>
           <h3>Data lineage as a graph — making "where did this number come from?" answerable</h3>
-          <p class="role">Core development on <em>PowerMe</em>, an enterprise data-cataloging product, at an early-stage startup that scaled fast during my time there.</p>
+          <p class="role">
+            On <em>PowerMe</em> — a data catalog, governance &amp; lineage platform — I owned two capabilities end to end: the
+            <strong>data catalog</strong> and the <strong>lineage &amp; impact</strong> engine, which I started as its founding engineer.
+            This was an early-stage startup that scaled fast during my time there.
+          </p>
 
           <div class="grid-2">
             <div class="card problem">
@@ -873,6 +909,109 @@
               <p>Lineage isn't tabular — it's a graph. Model tables, jobs and reports as nodes and data-flow as edges, and "trace this metric to its source" becomes a graph traversal, not a pile of joins.</p>
             </div>
           </div>
+
+          <h4 class="sub-h">What I owned</h4>
+          <div class="grid-2">
+            <div class="card">
+              <h4>Data catalog</h4>
+              <p class="muted">
+                Cataloging the enterprise's data assets — datasets, tables, ETL jobs and the dashboards built on them — into one place teams could
+                <strong>search and discover</strong> what data existed and where it lived, rather than hunting through tribal knowledge.
+              </p>
+            </div>
+            <div class="card">
+              <h4>Lineage &amp; impact</h4>
+              <p class="muted">
+                The capability I <strong>started as founding engineer</strong>. Model every asset as a node and each data-flow as an edge, so you can
+                trace a metric back to its <strong>OLTP origin</strong> — and run <strong>impact analysis</strong> the other way: if this table or job changes,
+                what downstream reports break?
+              </p>
+            </div>
+          </div>
+
+          <figure class="diagram">
+            <figcaption class="cap">Illustrative — what tracing an asset's lineage looked like to an end user. The <span style="color:var(--amber)">amber path</span> shows impact analysis: change <code>fct_sales</code>, and everything downstream lights up.</figcaption>
+            <div class="scroll-x">
+              <svg class="lin-graph" viewBox="0 0 900 300" width="900" style="width:100%;min-width:820px;height:auto" role="img" aria-label="Illustrative end-to-end data lineage: source tables flow through an ETL job into warehouse datasets and on to a BI dashboard and metric; the amber path highlights assets impacted if fct_sales changes.">
+                <defs>
+                  <marker id="lg-arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#5b6478"/></marker>
+                  <marker id="lg-arr-imp" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#fbbf24"/></marker>
+                </defs>
+
+                <!-- column headers -->
+                <g font-family="ui-monospace,Menlo,monospace" font-size="11" font-weight="700" letter-spacing="0.06em" text-anchor="middle">
+                  <text x="90"  y="22" fill="#8a93a6">OLTP SOURCES</text>
+                  <text x="320" y="22" fill="#8a93a6">ETL / STREAM</text>
+                  <text x="560" y="22" fill="#8a93a6">WAREHOUSE</text>
+                  <text x="800" y="22" fill="#8a93a6">CONSUMPTION</text>
+                </g>
+
+                <!-- edges (drawn first, under the nodes) -->
+                <g fill="none" stroke-width="2">
+                  <path d="M164,122 C205,122 205,181 246,181" stroke="#5b6478" marker-end="url(#lg-arr)"/>
+                  <path d="M164,240 C205,240 205,181 246,181" stroke="#5b6478" marker-end="url(#lg-arr)"/>
+                  <path d="M394,181 C445,181 445,240 486,240" stroke="#5b6478" marker-end="url(#lg-arr)"/>
+                  <path d="M634,240 L726,240" stroke="#5b6478" marker-end="url(#lg-arr)"/>
+                  <!-- impact path (amber) -->
+                  <path d="M394,181 C445,181 445,122 486,122" stroke="#fbbf24" stroke-width="2.5" marker-end="url(#lg-arr-imp)"/>
+                  <path d="M634,122 L726,122" stroke="#fbbf24" stroke-width="2.5" marker-end="url(#lg-arr-imp)"/>
+                  <path d="M634,122 C690,122 672,240 726,240" stroke="#fbbf24" stroke-width="2.5" stroke-dasharray="1 0" marker-end="url(#lg-arr-imp)"/>
+                </g>
+
+                <!-- nodes: rect + type label + asset name. Colour = type. -->
+                <g font-family="ui-monospace,Menlo,monospace" text-anchor="middle">
+                  <!-- TABLE (emerald) -->
+                  <g>
+                    <rect x="16" y="96" width="148" height="52" rx="11" fill="#131a2c" stroke="#34d399" stroke-width="1.6"/>
+                    <text x="90" y="115" font-size="9" letter-spacing="0.08em" fill="#34d399">TABLE</text>
+                    <text x="90" y="134" font-size="13" font-weight="700" fill="#e7ecf5">orders</text>
+                  </g>
+                  <g>
+                    <rect x="16" y="214" width="148" height="52" rx="11" fill="#131a2c" stroke="#34d399" stroke-width="1.6"/>
+                    <text x="90" y="233" font-size="9" letter-spacing="0.08em" fill="#34d399">TABLE</text>
+                    <text x="90" y="252" font-size="13" font-weight="700" fill="#e7ecf5">customers</text>
+                  </g>
+                  <!-- JOB (cyan) -->
+                  <g>
+                    <rect x="246" y="155" width="148" height="52" rx="11" fill="#131a2c" stroke="#38bdf8" stroke-width="1.6"/>
+                    <text x="320" y="174" font-size="9" letter-spacing="0.08em" fill="#38bdf8">ETL JOB</text>
+                    <text x="320" y="193" font-size="13" font-weight="700" fill="#e7ecf5">sales_rollup</text>
+                  </g>
+                  <!-- DATASET (violet) — fct_sales is the "changed" asset -->
+                  <g>
+                    <rect x="486" y="90" width="148" height="64" rx="11" fill="#1c1830" stroke="#fbbf24" stroke-width="2.4"/>
+                    <text x="560" y="110" font-size="9" letter-spacing="0.08em" fill="#a78bfa">DATASET</text>
+                    <text x="560" y="128" font-size="13" font-weight="700" fill="#e7ecf5">fct_sales</text>
+                    <text x="560" y="144" font-size="9" fill="#fbbf24">● changed</text>
+                  </g>
+                  <g>
+                    <rect x="486" y="214" width="148" height="52" rx="11" fill="#131a2c" stroke="#a78bfa" stroke-width="1.6"/>
+                    <text x="560" y="233" font-size="9" letter-spacing="0.08em" fill="#a78bfa">DATASET</text>
+                    <text x="560" y="252" font-size="13" font-weight="700" fill="#e7ecf5">dim_customer</text>
+                  </g>
+                  <!-- CONSUMPTION (pink) — impacted get amber ring -->
+                  <g>
+                    <rect x="726" y="96" width="158" height="52" rx="11" fill="#131a2c" stroke="#fbbf24" stroke-width="2.4"/>
+                    <text x="805" y="115" font-size="9" letter-spacing="0.08em" fill="#f472b6">DASHBOARD</text>
+                    <text x="805" y="134" font-size="13" font-weight="700" fill="#e7ecf5">Revenue</text>
+                  </g>
+                  <g>
+                    <rect x="726" y="214" width="158" height="52" rx="11" fill="#131a2c" stroke="#fbbf24" stroke-width="2.4"/>
+                    <text x="805" y="233" font-size="9" letter-spacing="0.08em" fill="#f472b6">METRIC</text>
+                    <text x="805" y="252" font-size="13" font-weight="700" fill="#e7ecf5">Churn rate</text>
+                  </g>
+                </g>
+              </svg>
+            </div>
+            <div class="legend">
+              <span class="li"><span class="sw" style="border-color:#34d399;background:rgba(52,211,153,.18)"></span>table</span>
+              <span class="li"><span class="sw" style="border-color:#38bdf8;background:rgba(56,189,248,.18)"></span>ETL job</span>
+              <span class="li"><span class="sw" style="border-color:#a78bfa;background:rgba(167,139,250,.18)"></span>dataset</span>
+              <span class="li"><span class="sw" style="border-color:#f472b6;background:rgba(244,114,182,.18)"></span>dashboard / metric</span>
+              <span class="li"><span class="sw" style="border-color:#fbbf24;background:rgba(251,191,36,.18)"></span>impact path</span>
+            </div>
+            <p class="note-pill good" style="margin:12px auto 0">Impact analysis: change <code>fct_sales</code> → the Revenue dashboard and Churn-rate metric are affected.</p>
+          </figure>
 
           <figure class="diagram">
             <figcaption class="cap">lineage — data flows OLTP → transform → warehouse → dashboards, and a metadata plane indexes it into a searchable graph</figcaption>
@@ -959,21 +1098,21 @@
                   <div class="vnode queue">
                     <div class="vhead">
                       <span class="ico"><svg class="blogo logo-kafka" viewBox="0 0 24 24" role="img" aria-label="Apache Kafka"><use href="#b-apachekafka"/></svg></span>
-                      <span class="vtitle"><span class="ttl">Kafka ingestion</span><span class="sub">metadata stream</span></span>
+                      <span class="vtitle"><span class="ttl">Metadata ingestion</span><span class="sub">adapters + change-log listeners → Kafka</span></span>
                       <span class="more"></span>
                     </div>
-                    <div class="vdetail"><div class="vdetail-in"><p>Metadata scanned from every layer above streams in continuously.</p></div></div>
+                    <div class="vdetail"><div class="vdetail-in"><p>Metadata arrives from every layer via <strong>two paths</strong> — system-specific adapters that pull, and change-log listeners that push over Kafka. See "how metadata got in" below.</p></div></div>
                   </div>
 
                   <div class="vconn geo"><span class="rail"></span><span class="lbl">builds</span><span class="chev"></span></div>
 
                   <div class="vnode geo">
                     <div class="vhead">
-                      <span class="ico"><svg><use href="#i-geo"/></svg></span>
-                      <span class="vtitle"><span class="ttl">JanusGraph</span><span class="sub">lineage graph</span></span>
+                      <span class="ico"><svg><use href="#i-gw"/></svg></span>
+                      <span class="vtitle"><span class="ttl">Graph lineage store</span><span class="sub">nodes = assets · edges = data-flow</span></span>
                       <span class="more"></span>
                     </div>
-                    <div class="vdetail"><div class="vdetail-in"><p><strong>Where lineage lives.</strong> Tables, jobs and reports are nodes; data-flow is edges. "Trace this metric to its source" = one graph traversal.</p></div></div>
+                    <div class="vdetail"><div class="vdetail-in"><p><strong>Where lineage lives.</strong> Tables, jobs and reports are nodes; data-flow is edges, so "trace this metric to its source" is one graph traversal. The graph engine behind it went through three iterations — see the timeline below.</p></div></div>
                   </div>
 
                   <div class="vconn geo"><span class="rail"></span><span class="lbl">index</span><span class="chev"></span></div>
@@ -1001,12 +1140,62 @@
             </div>
           </figure>
 
-          <div><span class="tag">Python</span><span class="tag">JanusGraph</span><span class="tag">Elasticsearch</span><span class="tag">Apache Kafka</span><span class="tag">graph modeling</span></div>
+          <h4 class="sub-h">How metadata got in — two paths</h4>
+          <div class="grid-2">
+            <div class="card">
+              <h4><span class="path-tag pull">PULL</span> System-specific adapters</h4>
+              <p class="muted">
+                Purpose-built connectors — <strong>one per source system</strong>. Each connects to its source, extracts the metadata,
+                ingests it into PowerMe, and creates or updates the graph in the graph store. Adapters spanned <strong>every layer of the
+                data landscape</strong>: OLTP, OLAP, ETL, the data-virtualization layer and BI systems.
+              </p>
+            </div>
+            <div class="card">
+              <h4><span class="path-tag push">PUSH</span> Change-log listeners</h4>
+              <p class="muted">
+                Listeners that <strong>tail source-system change logs</strong> and push changes into PowerMe over <strong>Kafka</strong> —
+                fully automatic, <strong>no manual involvement</strong>. As sources changed, the lineage graph stayed current on its own.
+              </p>
+            </div>
+          </div>
+          <p class="note-pill good" style="margin:12px auto 0">Both paths converge on the <strong>graph lineage store</strong> — pull to onboard a system, push to keep it live.</p>
+
+          <figure class="diagram">
+            <figcaption class="cap">the lineage engine's graph store went through three iterations — I started it on Atlas and it settled on RedisGraph</figcaption>
+            <ol class="evo">
+              <li class="evo-step">
+                <span class="evo-ord">1</span>
+                <span class="evo-ico"><svg width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-gw"/></svg></span>
+                <span class="evo-name">Apache Atlas</span>
+                <span class="evo-note">&mdash; where the lineage capability began</span>
+              </li>
+              <li class="evo-arrow" aria-hidden="true">&rarr;</li>
+              <li class="evo-step">
+                <span class="evo-ord">2</span>
+                <span class="evo-ico"><svg width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-gw"/></svg></span>
+                <span class="evo-name">JanusGraph <span class="plus">+ Elasticsearch</span></span>
+                <span class="evo-note">&mdash; a graph store paired with a search index</span>
+              </li>
+              <li class="evo-arrow" aria-hidden="true">&rarr;</li>
+              <li class="evo-step final">
+                <span class="evo-ord">3</span>
+                <span class="evo-ico"><svg class="blogo logo-redis" width="28" height="28" viewBox="0 0 24 24" role="img" aria-label="Redis"><use href="#b-redis"/></svg></span>
+                <span class="evo-name">RedisGraph</span>
+                <span class="evo-note">&mdash; the engine it settled on</span>
+              </li>
+            </ol>
+          </figure>
+
+          <p class="role" style="margin-top:20px">
+            Beyond the build, I directed the end-to-end system design of the lineage engine and <strong>mentored engineers</strong> on graph databases and distributed systems.
+          </p>
+
+          <div><span class="tag">Python</span><span class="tag">Apache Atlas</span><span class="tag">JanusGraph</span><span class="tag">RedisGraph</span><span class="tag">Elasticsearch</span><span class="tag">Apache Kafka</span><span class="tag">graph modeling</span></div>
         </article>
 
         <!-- ========== 11 · Monolith → microservices (Infosys) ========== -->
         <article class="project reveal">
-          <span class="idx">10</span>
+          <span class="idx"><svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-svc"/></svg></span>
           <span class="company">Infosys</span>
           <h3>Monolith → microservices — where the backend instincts got wired in</h3>
           <p class="role">Full-stack backend, with an Angular front-end where the product needed one.</p>
