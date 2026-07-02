@@ -1,0 +1,356 @@
+/* ============================================================
+   Anand — Portfolio · VERTICAL interactive diagram system
+   ------------------------------------------------------------
+   Standing conventions (see PROGRESS.md):
+   · every architecture diagram is a genuinely VERTICAL flow —
+     nodes stacked top→bottom with drawn connectors, using the
+     full column width instead of cramming into a scroll strip.
+   · every system diagram is INTERACTIVE: hover / focus / click a
+     node ("system in focus") to reveal a detail panel (what it is,
+     its role, key numbers, the trade-off). Detail lives in the DOM
+     (inside each node) so no-JS and screen-readers still get it.
+   · no cramped layouts — nodes breathe, generous spacing.
+   Type colours: client=violet · svc=cyan · ai=pink · db=emerald
+   cache=red · queue=amber · gw=indigo · geo=teal
+   ============================================================ */
+
+/* diagram shell (shared with legend styles in components.css) */
+.diagram {
+  background: var(--bg-elev);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  margin: 20px 0;
+}
+.diagram .cap {
+  font-size: 13px;
+  color: var(--text-faint);
+  font-family: var(--mono);
+  margin-bottom: 14px;
+}
+
+/* multi-panel diagrams: stack focused panels vertically, roomy */
+.panels { display: grid; grid-template-columns: 1fr; gap: 18px; }
+.panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  padding: 18px 20px;
+}
+.panel .pcap {
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  font-size: 12.5px; color: var(--text-dim); margin-bottom: 16px;
+}
+.panel .pcap .pnum {
+  font-family: var(--mono); font-weight: 700; font-size: 11px;
+  color: var(--c, var(--cyan)); border: 1px solid var(--c, var(--cyan));
+  border-radius: 6px; padding: 1px 7px;
+}
+.panel .pcap b { color: var(--text); font-weight: 700; }
+.panel.p1 { --c: var(--cyan); }  .panel.p2 { --c: var(--amber); } .panel.p3 { --c: var(--emerald); }
+
+/* ============================================================
+   VFLOW — vertical flow. Nodes stack top→bottom, each full-width,
+   connected by a centered vertical rail with a downward chevron.
+   The whole thing uses the available horizontal space rather than
+   scrolling sideways.
+   ============================================================ */
+.vflow {
+  --c: var(--cyan);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  width: 100%;
+}
+
+/* a node in the vertical flow — a wide card: icon | text | (detail) */
+.vnode {
+  --c: var(--cyan);
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  background: var(--bg-card);
+  border: 1.5px solid var(--border-soft);
+  border-left: 4px solid var(--c);
+  border-radius: 14px;
+  padding: 15px 18px;
+  text-align: left;
+  cursor: pointer;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
+}
+/* the header row: icon + titles + affordance */
+.vnode .vhead {
+  display: grid;
+  grid-template-columns: 42px 1fr auto;
+  gap: 14px;
+  align-items: center;
+}
+.vnode .ico {
+  width: 42px; height: 42px;
+  display: grid; place-items: center;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--c) 12%, transparent);
+  flex: none;
+}
+.vnode .ico svg { width: 26px; height: 26px; display: block; color: var(--c); }
+.vnode .ico .blogo { width: 26px; height: 26px; }
+.vnode .vtitle { min-width: 0; }
+.vnode .ttl { font-weight: 700; font-size: 15px; color: var(--text); line-height: 1.25; }
+.vnode .sub { font-size: 12px; color: var(--text-dim); font-family: var(--mono); line-height: 1.35; margin-top: 2px; }
+/* the "tap for detail" chevron affordance */
+.vnode .more {
+  width: 26px; height: 26px; border-radius: 50%;
+  display: grid; place-items: center; flex: none;
+  border: 1px solid var(--border);
+  color: var(--c); font-size: 13px; line-height: 1;
+  transition: transform .2s ease, background .2s ease, border-color .2s ease;
+}
+.vnode .more::before { content: "＋"; font-family: var(--mono); }
+
+.vnode:hover, .vnode:focus-visible {
+  transform: translateY(-2px);
+  border-color: var(--c);
+  background: #1a2340;
+  box-shadow: 0 14px 30px -20px var(--c);
+  outline: none;
+}
+.vnode:hover .more, .vnode:focus-visible .more { background: color-mix(in srgb, var(--c) 18%, transparent); border-color: var(--c); }
+
+/* DETAIL — lives in the DOM; collapsed by default via grid-rows trick
+   (no max-height guessing), expands on .open. Keyboard + screen-reader
+   friendly. When JS is off we force it open (see no-js fallback). */
+.vnode .vdetail {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows .28s ease, margin .28s ease, opacity .2s ease;
+  opacity: 0;
+  margin-top: 0;
+}
+.vnode .vdetail > .vdetail-in { overflow: hidden; min-height: 0; }
+.vnode.open {
+  border-color: var(--c);
+  background: #1a2340;
+  box-shadow: 0 16px 36px -22px var(--c);
+}
+.vnode.open .more { transform: rotate(45deg); background: color-mix(in srgb, var(--c) 22%, transparent); border-color: var(--c); }
+.vnode.open .vdetail {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  margin-top: 14px;
+}
+.vnode .vdetail p {
+  margin: 0 0 10px;
+  font-size: 13.5px;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+.vnode .vdetail p:last-child { margin-bottom: 0; }
+.vnode .vdetail p strong { color: var(--text); }
+.vnode .vdetail .kv {
+  display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px;
+}
+.vnode .vdetail .kv span {
+  font-family: var(--mono); font-size: 11px;
+  color: var(--c);
+  border: 1px solid color-mix(in srgb, var(--c) 40%, transparent);
+  background: color-mix(in srgb, var(--c) 8%, transparent);
+  border-radius: 6px; padding: 3px 9px;
+}
+.vnode .vdetail .to {
+  font-size: 12.5px; color: var(--text-dim);
+  border-left: 2px solid var(--amber);
+  padding-left: 12px; margin-top: 10px;
+}
+.vnode .vdetail .to b { color: var(--amber); }
+
+/* connector between vertical nodes — a rail + chevron, drawn with CSS */
+.vconn {
+  --c: var(--cyan);
+  display: flex; flex-direction: column; align-items: center;
+  gap: 2px;
+  padding: 5px 0;
+}
+.vconn .rail {
+  width: 2px; height: 20px;
+  background: linear-gradient(180deg, var(--c), color-mix(in srgb, var(--c) 25%, transparent));
+  border-radius: 2px;
+}
+.vconn .lbl {
+  font-family: var(--mono); font-size: 10.5px; color: var(--text-dim);
+  background: rgba(255,255,255,.03); border: 1px solid var(--border-soft);
+  border-radius: 999px; padding: 2px 10px; text-align: center; max-width: 90%;
+}
+.vconn .chev { color: var(--c); font-size: 13px; line-height: 1; margin-top: -1px; }
+.vconn .chev::before { content: "▾"; }
+
+/* node type colours (mirror the flow legend) */
+.vnode.client, .vconn.client { --c: var(--violet); }
+.vnode.svc,    .vconn.svc    { --c: var(--cyan); }
+.vnode.ai,     .vconn.ai     { --c: var(--pink); }
+.vnode.db,     .vconn.db     { --c: var(--emerald); }
+.vnode.cache,  .vconn.cache  { --c: var(--red); }
+.vnode.queue,  .vconn.queue  { --c: var(--amber); }
+.vnode.gw,     .vconn.gw     { --c: var(--indigo); }
+.vnode.geo,    .vconn.geo    { --c: var(--teal); }
+
+/* a FORK: two-or-more branches side by side beneath one node,
+   used for parallel reads (shuttle) and multi-consumer fan-out (geo).
+   Each branch is a mini vertical column; wraps to stack on narrow. */
+.vfork {
+  width: 100%;
+  max-width: 640px;
+  border: 1px dashed var(--c, var(--cyan));
+  background: color-mix(in srgb, var(--c, var(--cyan)) 4%, transparent);
+  border-radius: 14px;
+  padding: 14px 16px 16px;
+}
+.vfork .fork-hd {
+  font-family: var(--mono); font-size: 10.5px; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--c, var(--cyan)); font-weight: 700;
+  margin-bottom: 12px; text-align: center;
+}
+.vfork .branches {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+.vfork .branches .vnode { max-width: none; }
+
+/* DEVICE POPULATION visual — the ~100K ping source, made tangible:
+   two device families (fixed vehicle units + driver mobile) that
+   sum to ~100K. Two cards + a sum chip. */
+.devsplit {
+  width: 100%;
+  max-width: 560px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.devcard {
+  --c: var(--violet);
+  background: var(--bg-card);
+  border: 1.5px solid var(--border-soft);
+  border-top: 3px solid var(--c);
+  border-radius: 12px;
+  padding: 14px 15px;
+  text-align: center;
+}
+.devcard .ico { width: 40px; height: 40px; margin: 0 auto 8px; display: grid; place-items: center; }
+.devcard .ico svg { width: 30px; height: 30px; color: var(--c); }
+.devcard .dt { font-weight: 700; font-size: 13.5px; color: var(--text); }
+.devcard .dd { font-size: 11.5px; color: var(--text-dim); font-family: var(--mono); margin-top: 3px; line-height: 1.4; }
+.devcard.fixed  { --c: var(--teal); }
+.devcard.driver { --c: var(--violet); }
+.devsum {
+  grid-column: 1 / -1;
+  text-align: center;
+  font-family: var(--mono); font-size: 12px; color: var(--text-dim);
+}
+.devsum b { color: var(--text); }
+.devsum .eq { color: var(--cyan); }
+@media (max-width: 460px) { .devsplit { grid-template-columns: 1fr; } }
+
+/* numbered end-to-end pipeline (prose steps) — unchanged, roomy */
+.pipeline {
+  margin: 28px 0 8px;
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(56,189,248,0.05), rgba(52,211,153,0.03));
+  padding: 20px 22px 22px;
+}
+.pcap-lead {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 13px; letter-spacing: .02em;
+  color: var(--text-dim); margin-bottom: 16px;
+}
+.pcap-lead .pnum { color: var(--cyan); font-weight: 700; }
+.pipe-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.pipe-steps li {
+  display: grid; grid-template-columns: 96px 1fr; gap: 14px; align-items: start;
+}
+.pipe-steps .pk {
+  font-family: var(--mono); font-size: 11.5px; font-weight: 700; letter-spacing: .04em;
+  text-transform: uppercase; color: var(--cyan);
+  border: 1px solid rgba(56,189,248,0.4); background: rgba(56,189,248,0.08);
+  border-radius: 7px; padding: 4px 8px; text-align: center; white-space: nowrap;
+}
+.pipe-steps li:nth-child(1) .pk { color: var(--violet); border-color: rgba(167,139,250,0.4); background: rgba(167,139,250,0.08); }
+.pipe-steps li:nth-child(2) .pk { color: var(--cyan);   border-color: rgba(56,189,248,0.4);  background: rgba(56,189,248,0.08); }
+.pipe-steps li:nth-child(3) .pk { color: var(--emerald);border-color: rgba(52,211,153,0.4);  background: rgba(52,211,153,0.08); }
+.pipe-steps li:nth-child(4) .pk { color: var(--amber);  border-color: rgba(251,191,36,0.4);  background: rgba(251,191,36,0.08); }
+.pipe-steps li:nth-child(5) .pk { color: var(--pink);   border-color: rgba(244,114,182,0.4); background: rgba(244,114,182,0.08); }
+.pipe-steps .pt { color: var(--text-dim); font-size: 14.5px; line-height: 1.62; }
+.pipe-steps .pt strong { color: var(--text); }
+@media (max-width: 560px) {
+  .pipe-steps li { grid-template-columns: 1fr; gap: 6px; }
+  .pipe-steps .pk { justify-self: start; }
+}
+
+/* inline SVG metric chart */
+.chart-svg { display: block; width: 100%; height: auto; max-width: 100%; }
+
+/* a small pill note under/near a step */
+.note-pill {
+  font-size: 11.5px; font-family: var(--mono); color: var(--text-dim);
+  background: rgba(255,255,255,0.03); border: 1px solid var(--border-soft);
+  border-radius: 8px; padding: 6px 12px; text-align: center; max-width: 560px;
+}
+.note-pill.good { color: var(--emerald); border-color: rgba(52,211,153,0.35); background: rgba(52,211,153,0.06); }
+.note-pill.warn { color: var(--red);     border-color: rgba(248,113,113,0.35); background: rgba(248,113,113,0.06); }
+
+/* diagram legend */
+.legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 16px; justify-content: center; }
+.legend .li { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: var(--text-dim); font-family: var(--mono); }
+.legend .sw { width: 22px; height: 14px; border-radius: 4px; flex: none; border: 1.5px solid; }
+.legend .sw.client{ border-color: var(--violet); background: rgba(167,139,250,0.18); }
+.legend .sw.svc   { border-color: var(--cyan);   background: rgba(56,189,248,0.18); }
+.legend .sw.ai    { border-color: var(--pink);   background: rgba(244,114,182,0.18); }
+.legend .sw.db    { border-color: var(--emerald);background: rgba(52,211,153,0.18); }
+.legend .sw.cache { border-color: var(--red);    background: rgba(248,113,113,0.18); }
+.legend .sw.queue { border-color: var(--amber);  background: rgba(251,191,36,0.18); }
+.legend .sw.gw    { border-color: var(--indigo); background: rgba(129,140,248,0.18); }
+.legend .sw.geo   { border-color: var(--teal);   background: rgba(45,212,191,0.18); }
+
+/* a subtle "interactive" hint above the first diagram of a project */
+.diag-hint {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-family: var(--mono); font-size: 11px; color: var(--text-faint);
+  margin-bottom: 6px;
+}
+.diag-hint .pulse {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--cyan);
+  box-shadow: 0 0 0 0 rgba(56,189,248,.5);
+  animation: hintpulse 2.4s ease-out infinite;
+}
+@keyframes hintpulse {
+  0%   { box-shadow: 0 0 0 0 rgba(56,189,248,.5); }
+  70%  { box-shadow: 0 0 0 7px rgba(56,189,248,0); }
+  100% { box-shadow: 0 0 0 0 rgba(56,189,248,0); }
+}
+
+/* staggered flow-in: vertical nodes cascade top→bottom when scrolled
+   into view. Content is always in the DOM — animates opacity/transform. */
+.vflow.flow-anim > *, .devsplit.flow-anim > * { opacity: 0; transform: translateY(10px); }
+.vflow.flow-anim.flow-in > *, .devsplit.flow-anim.flow-in > * {
+  opacity: 1; transform: none;
+  transition: opacity .4s ease, transform .4s ease;
+  transition-delay: calc(var(--i, 0) * 70ms);
+}
+.chart-svg.grow rect { transform-box: fill-box; transform-origin: bottom center; }
+.chart-svg.grow rect { transform: scaleY(0); }
+.chart-svg.grow.in-view rect { transform: scaleY(1); transition: transform .8s cubic-bezier(.2,.8,.2,1); }
+.chart-svg.grow.in-view rect:nth-of-type(2) { transition-delay: .18s; }
+
+/* no-JS fallback: reveal every detail, hide the +/pulse affordances,
+   and never hide flow nodes behind an animation start-state. */
+.no-js .vnode { cursor: default; }
+.no-js .vnode .more, .no-js .diag-hint { display: none; }
+.no-js .vnode .vdetail { grid-template-rows: 1fr; opacity: 1; margin-top: 14px; }
+.no-js .vflow.flow-anim > *, .no-js .devsplit.flow-anim > * { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .vnode, .vnode .more, .vnode .vdetail, .diag-hint .pulse { transition: none; animation: none; }
+  .vflow.flow-anim > *, .devsplit.flow-anim > * { opacity: 1; transform: none; transition: none; }
+  .chart-svg.grow rect { transform: none; }
+}

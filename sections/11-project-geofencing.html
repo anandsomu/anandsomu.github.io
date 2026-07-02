@@ -1,0 +1,382 @@
+        <!-- ========== 02 · Real-time geofencing & ETA pipeline (MoveInSync) — the deep one ========== -->
+        <article class="project reveal" id="p-geofencing">
+          <span class="idx">02</span>
+          <h3>Real-time <span class="grad">geofencing</span> pipeline — <span class="grad">~1M GPS pings a minute</span></h3>
+          <p class="role">The distributed system I'm proudest of: a pipeline that ingests a firehose of vehicle GPS and turns it into ground truth — where a shuttle is, whether it's on its intended route, and whether employees reached safely. Across <strong>~100K devices</strong> and <strong>~100K geofences</strong>, without melting the fleet backend.</p>
+
+          <div class="card" style="margin-top:0">
+            <h4>What it powers</h4>
+            <p class="muted">
+              It's the backbone under several products, not a
+              single feature: <strong>live tracking for admins</strong> (is a vehicle actually running on its intended route?),
+              <strong>safety / verified-reach tracking</strong> (did employees get where they were going?), and <strong>live ETAs</strong> for riders.
+              ETA is just one consumer among several — every downstream that needs "where is this vehicle, right now, relative to a boundary" sits on top of it.
+            </p>
+          </div>
+
+          <div class="grid-2">
+            <div class="card problem">
+              <h4>The problem</h4>
+              <p>
+                The legacy path recomputed <em>every rider's ETA on every GPS ping</em> — iterating route stops and running a road-network distance
+                calc per stop. At <strong>~1M pings/minute</strong> from <strong>~100K devices</strong> against <strong>~100K active geofences</strong>,
+                ETA p95 had climbed to <strong>~2.5s</strong>, and during the 8:30–10:00 AM peak ETAs lagged reality by <strong>30–60s</strong> —
+                riders saw "5 min away" while the shuttle was already at the gate, causing missed boardings.
+              </p>
+            </div>
+            <div class="card insight">
+              <h4>The insight</h4>
+              <p>
+                Out of ~1M pings a minute, <strong>only a few hundred are state-changing</strong> — a vehicle actually entering or leaving a fence.
+                Everything else is just movement. So I built the pipeline around <strong>per-transition event handling</strong> instead of
+                per-ping recomputation: the expensive work happens <em>only</em> when a fence boundary is crossed. The rest of the firehose just
+                updates position in a purpose-built geospatial store that does the boundary math — and every consumer (tracking, safety, ETA) reads off those transitions.
+              </p>
+            </div>
+          </div>
+
+          <!-- END-TO-END PIPELINE, told as an ordered flow first (prose), then diagrammed -->
+          <div class="pipeline">
+            <div class="pcap-lead"><span class="pnum">▸</span> The pipeline, end to end</div>
+            <ol class="pipe-steps">
+              <li>
+                <span class="pk">Ingest</span>
+                <span class="pt"><strong>GPS pings from those devices.</strong> Each vehicle unit and driver phone holds an open WebSocket to a
+                <strong>SocketCluster</strong> layer and streams position packets. To avoid ~100K open sockets on my own service, the Geofencing Service
+                subscribes at <strong>BUID (per-tenant) granularity</strong> — a few hundred logical subscriptions — while SocketCluster does the device-side fan-in.</span>
+              </li>
+              <li>
+                <span class="pk">Write</span>
+                <span class="pt"><strong>Position lands in the geospatial store.</strong> For each ping, the Geofencing Service writes the new position into
+                <strong>Tile38</strong> over its command protocol — directly, <em>not</em> through Kafka. This is the latency-sensitive hot path, so it stays as short as possible.</span>
+              </li>
+              <li>
+                <span class="pk">Evaluate</span>
+                <span class="pt"><strong>Tile38 does the geofence math.</strong> On every position update it evaluates the point against ~100K active geofences and
+                decides whether a <strong>stop-fence entry or exit</strong> just happened. The vast majority of pings cross no boundary and produce nothing further — that silence is the whole win.</span>
+              </li>
+              <li>
+                <span class="pk">Transition</span>
+                <span class="pt"><strong>Only entries/exits fan out.</strong> On a transition, Tile38 fires a hook onto a <strong>Kafka callback topic</strong>; the Geofencing
+                Service (its sole consumer) transforms it and emits a clean <strong>fence-transition event</strong> onto a downstream Kafka topic — a few hundred events a minute, not a million.</span>
+              </li>
+              <li>
+                <span class="pk">Consume</span>
+                <span class="pt"><strong>Many consumers read the same transitions.</strong> Client services consume the transition topic and each does its own thing:
+                <strong>admin live-tracking</strong> checks whether a vehicle is on its intended route, <strong>safety tracking</strong> confirms employees reached
+                their destination, and <strong>rider ETAs</strong> update and push at <strong>per-vehicle granularity</strong> (riders track <em>their</em> shuttle, not a stop),
+                plus polling REST for clients that prefer it. Reliable stop-arrival events also drive trip-lifecycle automation (no more manual "arrived" tapping).</span>
+              </li>
+            </ol>
+          </div>
+
+          <!-- PANEL 1: hot write path — VERTICAL & interactive -->
+          <figure class="diagram">
+            <figcaption class="cap">the hot write path — every ping, top to bottom, no Kafka in the way</figcaption>
+            <div class="diag-hint"><span class="pulse"></span> hover, tap or focus any component for its role, numbers and trade-off</div>
+            <div class="panel p1">
+              <div class="pcap"><span class="pnum">1</span><b>Hot write path</b> — devices → SocketCluster → service → Tile38</div>
+              <div class="vflow">
+
+                <div class="vfork client">
+                  <div class="fork-hd">the firehose · two device populations · ~100K concurrent at peak</div>
+                  <div class="branches">
+                    <div class="vnode client">
+                      <div class="vhead">
+                        <span class="ico"><svg><use href="#i-vehicle"/></svg></span>
+                        <span class="vtitle"><span class="ttl">Fixed vehicle units</span><span class="sub">mounted GPS hardware</span></span>
+                        <span class="more"></span>
+                      </div>
+                      <div class="vdetail"><div class="vdetail-in">
+                        <p><strong>GPS hardware mounted inside each shuttle.</strong> Opens a WebSocket to SocketCluster and streams a position packet every few seconds.</p>
+                      </div></div>
+                    </div>
+                    <div class="vnode client">
+                      <div class="vhead">
+                        <span class="ico"><svg><use href="#i-phone"/></svg></span>
+                        <span class="vtitle"><span class="ttl">Driver mobile</span><span class="sub">the driver app</span></span>
+                        <span class="more"></span>
+                      </div>
+                      <div class="vdetail"><div class="vdetail-in">
+                        <p><strong>Position streamed from the driver's phone.</strong> Same as the fixed units — an open WebSocket to SocketCluster, a packet every few seconds.</p>
+                      </div></div>
+                    </div>
+                  </div>
+                  <div class="devsum" style="margin-top:12px">fixed units <span class="eq">+</span> driver phones <span class="eq">=</span> <b>~100K</b> concurrent at peak <span class="eq">→</span> <b>~1M pings/min</b> against <b>~100K</b> active geofences</div>
+                </div>
+
+                <div class="vconn client"><span class="rail"></span><span class="lbl">WebSocket · packets every few sec · ~1M/min</span><span class="chev"></span></div>
+
+                <div class="vnode gw">
+                  <div class="vhead">
+                    <span class="ico"><svg><use href="#i-gw"/></svg></span>
+                    <span class="vtitle"><span class="ttl">SocketCluster</span><span class="sub">device-side fan-in · Node.js, HA</span></span>
+                    <span class="more"></span>
+                  </div>
+                  <div class="vdetail"><div class="vdetail-in">
+                    <p><strong>Terminates the device sockets.</strong> One device = one socket = one device-level channel, organised by BUID. It owns the ~100K connections so my service never has to.</p>
+                    <p class="to"><b>Why here ·</b> terminate connections at the layer built for the count; let downstream subscribe to aggregated channels, not to individual sockets.</p>
+                  </div></div>
+                </div>
+
+                <div class="vconn svc"><span class="rail"></span><span class="lbl">subscribe per-BUID</span><span class="chev"></span></div>
+
+                <div class="vnode svc">
+                  <div class="vhead">
+                    <span class="ico"><svg class="blogo logo-spring" viewBox="0 0 24 24" role="img" aria-label="Spring Boot"><use href="#b-spring"/></svg></span>
+                    <span class="vtitle"><span class="ttl">Geofencing Service</span><span class="sub">Java · Spring Boot</span></span>
+                    <span class="more"></span>
+                  </div>
+                  <div class="vdetail"><div class="vdetail-in">
+                    <p><strong>The heart of the pipeline.</strong> Subscribes at <strong>BUID granularity</strong> — a few hundred logical subscriptions, not ~100K sockets — and writes each position to Tile38 over its command protocol.</p>
+                    <div class="kv"><span>~100K sockets → ~100s subs</span><span>no OS tuning</span></div>
+                    <p>Also hosts the geofence-registration REST APIs (bulk + single).</p>
+                  </div></div>
+                </div>
+
+                <div class="vconn geo"><span class="rail"></span><span class="lbl">SET position (Tile38 cmd)</span><span class="chev"></span></div>
+
+                <div class="vnode geo">
+                  <div class="vhead">
+                    <span class="ico"><svg><use href="#i-geo"/></svg></span>
+                    <span class="vtitle"><span class="ttl">Tile38</span><span class="sub">geospatial store · evaluates vs ~100K fences</span></span>
+                    <span class="more"></span>
+                  </div>
+                  <div class="vdetail"><div class="vdetail-in">
+                    <p><strong>Does the boundary math.</strong> On every position update it checks the point against ~100K active geofences and detects a stop-fence entry/exit. Most pings cross nothing — that silence is the whole design.</p>
+                    <div class="kv"><span>~100K active fences</span><span>Redis wire protocol</span></div>
+                  </div></div>
+                </div>
+
+              </div>
+            </div>
+            <div class="legend">
+              <span class="li"><span class="sw client"></span>client / device</span>
+              <span class="li"><span class="sw gw"></span>gateway</span>
+              <span class="li"><span class="sw svc"></span>microservice</span>
+              <span class="li"><span class="sw geo"></span>geospatial store</span>
+            </div>
+          </figure>
+
+          <!-- PANEL 2: transition fan-out — VERTICAL with a multi-consumer fork -->
+          <figure class="diagram">
+            <figcaption class="cap">the transition fan-out — only fence entries/exits emit events: a few hundred/min, not ~1M</figcaption>
+            <div class="panel p2">
+              <div class="pcap"><span class="pnum">2</span><b>Transition fan-out</b> — Tile38 → Kafka → service → Kafka → many consumers</div>
+              <div class="vflow">
+
+                <div class="vnode geo">
+                  <div class="vhead">
+                    <span class="ico"><svg><use href="#i-geo"/></svg></span>
+                    <span class="vtitle"><span class="ttl">Tile38 detects entry / exit</span><span class="sub">state-changing pings only</span></span>
+                    <span class="more"></span>
+                  </div>
+                  <div class="vdetail"><div class="vdetail-in">
+                    <p><strong>Only transitions matter here.</strong> A crossing fires a fence-hit hook. Out of ~1M pings/min, only a few hundred reach this stage.</p>
+                  </div></div>
+                </div>
+
+                <div class="vconn queue"><span class="rail"></span><span class="lbl">fence-hit hook</span><span class="chev"></span></div>
+
+                <div class="vnode queue">
+                  <div class="vhead">
+                    <span class="ico"><svg class="blogo logo-kafka" viewBox="0 0 24 24" role="img" aria-label="Apache Kafka"><use href="#b-apachekafka"/></svg></span>
+                    <span class="vtitle"><span class="ttl">Kafka — callback topic</span><span class="sub">buffers the burst</span></span>
+                    <span class="more"></span>
+                  </div>
+                  <div class="vdetail"><div class="vdetail-in">
+                    <p><strong>Why Kafka is here but not on the write path.</strong> Tile38 callbacks are bursty and want buffering; the write path is latency-sensitive and needs no replay. The placement is deliberately asymmetric.</p>
+                  </div></div>
+                </div>
+
+                <div class="vconn svc"><span class="rail"></span><span class="lbl">sole consumer</span><span class="chev"></span></div>
+
+                <div class="vnode svc">
+                  <div class="vhead">
+                    <span class="ico"><svg class="blogo logo-spring" viewBox="0 0 24 24" role="img" aria-label="Spring Boot"><use href="#b-spring"/></svg></span>
+                    <span class="vtitle"><span class="ttl">Geofencing Service transforms</span><span class="sub">callback → clean event</span></span>
+                    <span class="more"></span>
+                  </div>
+                  <div class="vdetail"><div class="vdetail-in">
+                    <p><strong>Normalises the raw hit</strong> into a clean fence-transition event (which vehicle, which fence, entry vs exit, when) and emits it downstream.</p>
+                  </div></div>
+                </div>
+
+                <div class="vconn queue"><span class="rail"></span><span class="lbl">emit transition</span><span class="chev"></span></div>
+
+                <div class="vnode queue">
+                  <div class="vhead">
+                    <span class="ico"><svg class="blogo logo-kafka" viewBox="0 0 24 24" role="img" aria-label="Apache Kafka"><use href="#b-apachekafka"/></svg></span>
+                    <span class="vtitle"><span class="ttl">Kafka — transitions topic</span><span class="sub">replayable · many consumers</span></span>
+                    <span class="more"></span>
+                  </div>
+                  <div class="vdetail"><div class="vdetail-in">
+                    <p><strong>The shared backbone.</strong> Downstream fan-out has many consumers and wants replay → Kafka again. Every product below reads the same clean topic.</p>
+                    <div class="kv"><span>few hundred events/min</span></div>
+                  </div></div>
+                </div>
+
+                <div class="vconn client"><span class="rail"></span><span class="lbl">each consumer reads the same topic</span><span class="chev"></span></div>
+
+                <div class="vfork client">
+                  <div class="fork-hd">downstream consumers · independent</div>
+                  <div class="branches">
+                    <div class="vnode client">
+                      <div class="vhead">
+                        <span class="ico"><svg><use href="#i-client"/></svg></span>
+                        <span class="vtitle"><span class="ttl">Admin live-tracking</span></span>
+                        <span class="more"></span>
+                      </div>
+                      <div class="vdetail"><div class="vdetail-in"><p>Is the vehicle actually on its intended route? Route-adherence monitoring for operations.</p></div></div>
+                    </div>
+                    <div class="vnode client">
+                      <div class="vhead">
+                        <span class="ico"><svg><use href="#i-bell"/></svg></span>
+                        <span class="vtitle"><span class="ttl">Safety / verified-reach</span></span>
+                        <span class="more"></span>
+                      </div>
+                      <div class="vdetail"><div class="vdetail-in"><p>Did employees reach their destination? Reliable stop-arrival events also drive trip-lifecycle automation — no more manual "arrived" tapping.</p></div></div>
+                    </div>
+                    <div class="vnode client">
+                      <div class="vhead">
+                        <span class="ico"><svg><use href="#i-clock"/></svg></span>
+                        <span class="vtitle"><span class="ttl">Rider ETAs</span></span>
+                        <span class="more"></span>
+                      </div>
+                      <div class="vdetail"><div class="vdetail-in"><p>Update + push at <strong>per-vehicle</strong> granularity — a rider tracks <em>their</em> shuttle, not a stop — plus polling REST for clients that prefer it.</p></div></div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+            <div class="legend">
+              <span class="li"><span class="sw geo"></span>geospatial store</span>
+              <span class="li"><span class="sw queue"></span>Kafka stream</span>
+              <span class="li"><span class="sw svc"></span>microservice</span>
+              <span class="li"><span class="sw client"></span>consumers</span>
+            </div>
+          </figure>
+
+          <!-- Why-it-works explainer cards -->
+          <div class="grid-2">
+            <div class="card">
+              <h4>Why BUID-granularity subscription</h4>
+              <p class="muted">
+                Subscribing per-device would mean ~100K open sockets on the Geofencing Service — kernel-level FD/ephemeral-port/TCP tuning and a big scale-up.
+                Subscribing at <strong>BUID granularity</strong> collapses that to a few hundred connections with no OS tuning. SocketCluster owns the device-side
+                fan-in; the service does per-BUID logical processing. It's a partition-by-tenant move on the <em>connection</em> axis.
+              </p>
+            </div>
+            <div class="card">
+              <h4>Why Kafka sits where it does</h4>
+              <p class="muted">
+                <strong>Writes</strong> (device → Tile38) are latency-sensitive and don't need replay → direct path, no Kafka. <strong>Tile38 callbacks</strong>
+                are bursty → buffer them through Kafka with the service as sole consumer. <strong>Downstream fan-out</strong> has many consumers and wants
+                replay → Kafka again. The placement is deliberately asymmetric, not uniform.
+              </p>
+            </div>
+          </div>
+
+          <!-- PANEL 3: HA failover — VERTICAL & interactive -->
+          <figure class="diagram">
+            <figcaption class="cap">HA — Tile38 speaks the Redis wire protocol, so Sentinel can guard it; promotion is scripted for Tile38's quirks</figcaption>
+            <div class="panel p3">
+              <div class="pcap"><span class="pnum">3</span><b>Failover</b> — Sentinel quorum detects a dead master and promotes a replica in ~15s</div>
+              <div class="vflow">
+
+                <div class="vnode cache">
+                  <div class="vhead">
+                    <span class="ico"><svg class="blogo logo-redis" viewBox="0 0 24 24" role="img" aria-label="Redis"><use href="#b-redis"/></svg></span>
+                    <span class="vtitle"><span class="ttl">Redis Sentinel</span><span class="sub">quorum of 3</span></span>
+                    <span class="more"></span>
+                  </div>
+                  <div class="vdetail"><div class="vdetail-in">
+                    <p><strong>Watches the master.</strong> Because Tile38 speaks the Redis wire protocol, Sentinel can health-check and orchestrate failover for it — no bespoke monitoring stack.</p>
+                  </div></div>
+                </div>
+
+                <div class="vconn cache"><span class="rail"></span><span class="lbl">health-check</span><span class="chev"></span></div>
+
+                <div class="vnode geo">
+                  <div class="vhead">
+                    <span class="ico"><svg><use href="#i-geo"/></svg></span>
+                    <span class="vtitle"><span class="ttl">Tile38 master</span><span class="sub">holds fences + live positions</span></span>
+                    <span class="more"></span>
+                  </div>
+                  <div class="vdetail"><div class="vdetail-in">
+                    <p><strong>The single writer.</strong> All position writes and fence evaluations happen here; replicas trail it asynchronously.</p>
+                  </div></div>
+                </div>
+
+                <div class="vconn geo"><span class="rail"></span><span class="lbl">async replicate</span><span class="chev"></span></div>
+
+                <div class="vnode geo">
+                  <div class="vhead">
+                    <span class="ico"><svg><use href="#i-geo"/></svg></span>
+                    <span class="vtitle"><span class="ttl">Tile38 replicas</span><span class="sub">promoted on master loss</span></span>
+                    <span class="more"></span>
+                  </div>
+                  <div class="vdetail"><div class="vdetail-in">
+                    <p><strong>Promotion is scripted.</strong> Tile38's promotion commands don't map 1:1 onto Redis, so a bespoke script bridges Sentinel's failure-detection to Tile38's promotion. Clients fail over in <strong>~15s</strong>.</p>
+                    <div class="kv"><span>~15s failover</span></div>
+                    <p class="to"><b>Real incident ·</b> a master OOM after a new customer pushed fence-count past headroom failed over in ~15s with no rider impact — and put fence-count on the capacity dashboard.</p>
+                  </div></div>
+                </div>
+
+              </div>
+              <div class="note-pill" style="margin:14px auto 0">a bespoke promotion script bridges Sentinel's failure-detection to Tile38's promotion commands (they don't map 1:1 onto Redis) — clients fail over in ~15s</div>
+            </div>
+            <div class="legend">
+              <span class="li"><span class="sw cache"></span>Sentinel</span>
+              <span class="li"><span class="sw geo"></span>Tile38</span>
+            </div>
+          </figure>
+
+          <figure class="diagram">
+            <figcaption class="cap">result — ETA p95 latency, legacy per-ping path vs the new transition-driven pipeline</figcaption>
+            <svg class="chart-svg" viewBox="0 0 640 220" role="img" aria-label="ETA p95 dropped from about 2500 milliseconds to about 400 milliseconds, roughly six times faster.">
+              <line x1="150" y1="30" x2="150" y2="180" stroke="#2a3556" stroke-width="1"/>
+              <line x1="150" y1="180" x2="620" y2="180" stroke="#2a3556" stroke-width="1"/>
+              <text x="140" y="35" fill="#7683a8" font-size="11" text-anchor="end" font-family="Space Grotesk,monospace">2.5s</text>
+              <text x="140" y="108" fill="#7683a8" font-size="11" text-anchor="end" font-family="Space Grotesk,monospace">1.2s</text>
+              <text x="140" y="184" fill="#7683a8" font-size="11" text-anchor="end" font-family="Space Grotesk,monospace">0</text>
+              <rect x="210" y="30" width="120" height="150" rx="8" fill="#f87171" opacity="0.9"/>
+              <text x="270" y="22" fill="#f87171" font-size="16" font-weight="700" text-anchor="middle" font-family="Inter,sans-serif">~2.5s</text>
+              <text x="270" y="200" fill="#a6b1cf" font-size="13" text-anchor="middle" font-family="Inter,sans-serif">Legacy · per-ping</text>
+              <rect x="430" y="156" width="120" height="24" rx="8" fill="#34d399"/>
+              <text x="490" y="148" fill="#34d399" font-size="16" font-weight="700" text-anchor="middle" font-family="Inter,sans-serif">~400ms</text>
+              <text x="490" y="200" fill="#a6b1cf" font-size="13" text-anchor="middle" font-family="Inter,sans-serif">New pipeline · per-transition</text>
+              <text x="385" y="108" fill="#38bdf8" font-size="14" font-weight="600" text-anchor="middle" font-family="Space Grotesk,monospace">~6&times; faster</text>
+            </svg>
+          </figure>
+
+          <div class="outcomes">
+            <div class="outcome"><div class="big metric-num">2.5s → 400ms</div><div class="sub">ETA p95 latency</div></div>
+            <div class="outcome"><div class="big metric-num">~2&times;</div><div class="sub">ping-throughput headroom, no extra scaling</div></div>
+            <div class="outcome"><div class="big metric-num">~15s</div><div class="sub">Tile38 failover via Sentinel</div></div>
+            <div class="outcome"><div class="big metric-num">off the list</div><div class="sub">stale-ETA fell off top complaints</div></div>
+          </div>
+
+          <div class="card" style="margin-top:22px">
+            <h4>Shipping it without a bad night</h4>
+            <p class="muted">
+              I ran the new pipeline in <strong>shadow for ~3 weeks</strong> — both paths computed ETAs, only the legacy one answered queries — with a
+              daily diff. Cutover was <em>gated</em>: within &plusmn;15s of legacy on 98%+ of stops, at a quarter of the latency, sustained for five
+              consecutive days — then a controlled 5% → 25% → 100% ramp over a week. One post-cutover incident (a Tile38 master OOM after a new
+              customer pushed fence-count past headroom) failed over in ~15s with no rider impact, and put fence-count on the capacity dashboard.
+            </p>
+          </div>
+
+          <div class="tradeoff">
+            <strong>What I'd revisit:</strong> fence registration is a <em>dual-write</em> — the service writes both Tile38 (active-fence index) and a
+            relational DB (fence metadata), so a crash between the two leaves them inconsistent. I'd make the DB authoritative and treat Tile38 as a
+            <strong>derived projection</strong>, rebuilt via a <strong>transactional outbox</strong> — shortening failover recovery and unlocking sharded,
+            multi-region Tile38. I'd also split ingest from projection into two services along the Kafka callback boundary so they scale independently.
+          </div>
+
+          <div class="stackline"><b>Stack:</b> Java · Spring Boot · Tile38 · Redis Sentinel · Apache Kafka · SocketCluster · PostgreSQL · Prometheus + Grafana</div>
+          <div>
+            <span class="tag flag">real-time geo</span><span class="tag">Tile38</span><span class="tag">Kafka</span><span class="tag">Redis Sentinel</span><span class="tag">Spring Boot</span>
+          </div>
+        </article>

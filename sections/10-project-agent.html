@@ -1,0 +1,155 @@
+        <!-- ========== 01 · Agentic shuttle-booking agent (MoveInSync) ========== -->
+        <article class="project reveal" id="p-agent">
+          <span class="idx">01</span>
+          <span class="company">MoveInSync</span>
+          <h3><span class="grad">Deterministic AI Booking Agent</span>: Bringing Conversational Shuttles to Production Scale</h3>
+          <p class="role">Employees <strong>book, cancel and track shuttles in plain language</strong> on Teams / Slack / WhatsApp — and it feels as fast as the app.</p>
+
+          <div class="grid-2">
+            <div class="card problem">
+              <h4>The problem</h4>
+              <p>
+                A naive agent that lets the LLM drive the whole workflow does 5–7 serial inferences per booking — 3–10&times; slower
+                than tapping through the UI, token-hungry, and liable to call tools out of order in a flow that allocates seats and takes payment.
+              </p>
+            </div>
+            <div class="card insight">
+              <h4>The insight</h4>
+              <p>
+                The booking flow is a graph we already know — it's literally the UI's screen sequence. So the <strong>graph is deterministic
+                code</strong> and the LLM does only what it's good at: interpreting messy language and phrasing the reply. The happy path is
+                <strong>one small-model NLU call per turn</strong>, then parallel REST, then a templated answer.
+              </p>
+            </div>
+          </div>
+
+          <figure class="diagram">
+            <figcaption class="cap">one user turn — top to bottom: a single LLM hop, then parallel REST, then a templated reply</figcaption>
+            <div class="diag-hint"><span class="pulse"></span> hover, tap or focus any stage for detail</div>
+            <div class="vflow">
+
+              <div class="vnode client">
+                <div class="vhead">
+                  <span class="ico"><svg><use href="#i-client"/></svg></span>
+                  <span class="vtitle"><span class="ttl">User message</span><span class="sub">Teams · Slack · WhatsApp</span></span>
+                  <span class="more"></span>
+                </div>
+                <div class="vdetail"><div class="vdetail-in">
+                  <p><strong>Where it starts.</strong> The employee types free text — "book my usual for tomorrow 8am". No form, no menu. The same agent is reachable from whichever chat surface the enterprise already uses.</p>
+                  <p class="to"><b>Trade-off ·</b> if the LLM is slow or down, this degrades to a zero-inference menu UX and the app is always the escape hatch — chat is an add-on, never the only door.</p>
+                </div></div>
+              </div>
+
+              <div class="vconn cache"><span class="rail"></span><span class="lbl">load session</span><span class="chev"></span></div>
+
+              <div class="vnode cache">
+                <div class="vhead">
+                  <span class="ico"><svg class="blogo logo-redis" viewBox="0 0 24 24" role="img" aria-label="Redis"><use href="#b-redis"/></svg></span>
+                  <span class="vtitle"><span class="ttl">Redis — identity &amp; session</span><span class="sub">~1–3ms</span></span>
+                  <span class="more"></span>
+                </div>
+                <div class="vdetail"><div class="vdetail-in">
+                  <p><strong>What it holds.</strong> Conversation state and the user's identity + session slots live in Redis, so the pods stay <strong>stateless</strong> and scale horizontally on Kubernetes behind an HPA.</p>
+                  <div class="kv"><span>~1–3ms read</span><span>stateless pods</span></div>
+                  <p>Tenant identity (BUID) is injected by the auth proxy and <strong>never enters the model context</strong>.</p>
+                </div></div>
+              </div>
+
+              <div class="vconn ai"><span class="rail"></span><span class="lbl">the one LLM hop</span><span class="chev"></span></div>
+
+              <div class="vnode ai">
+                <div class="vhead">
+                  <span class="ico"><svg><use href="#i-ai"/></svg></span>
+                  <span class="vtitle"><span class="ttl">LLM — NLU only</span><span class="sub">intent + slots · ~300–600ms</span></span>
+                  <span class="more"></span>
+                </div>
+                <div class="vdetail"><div class="vdetail-in">
+                  <p><strong>The only inference on the happy path.</strong> A small, tiered model extracts intent and slots from the utterance. It does <em>not</em> decide what happens next — the deterministic graph does. That's the whole latency win versus a naive 5–7-hop agent.</p>
+                  <div class="kv"><span>~300–600ms</span><span>model-tiered</span><span>structured outputs</span><span>prompt caching</span></div>
+                  <p class="to"><b>Trade-off ·</b> pushing all control-flow into code means new capabilities are code, not a prompt tweak — deliberate, for a money/seat-allocating flow.</p>
+                </div></div>
+              </div>
+
+              <div class="vconn svc"><span class="rail"></span><span class="lbl">fan out — the same calls the UI makes</span><span class="chev"></span></div>
+
+              <div class="vfork svc">
+                <div class="fork-hd">parallel reads · in-flight together</div>
+                <div class="branches">
+                  <div class="vnode svc">
+                    <div class="vhead">
+                      <span class="ico"><svg><use href="#i-svc"/></svg></span>
+                      <span class="vtitle"><span class="ttl">get shifts</span></span>
+                      <span class="more"></span>
+                    </div>
+                    <div class="vdetail"><div class="vdetail-in"><p>Available shuttle shifts for the requested day, from the Shuttle service — wrapped as a <strong>typed tool</strong>.</p></div></div>
+                  </div>
+                  <div class="vnode svc">
+                    <div class="vhead">
+                      <span class="ico"><svg><use href="#i-svc"/></svg></span>
+                      <span class="vtitle"><span class="ttl">holidays / cutoffs</span></span>
+                      <span class="more"></span>
+                    </div>
+                    <div class="vdetail"><div class="vdetail-in"><p>Is the day bookable? Booking cutoffs and holiday calendars, checked in parallel rather than in series.</p></div></div>
+                  </div>
+                  <div class="vnode svc">
+                    <div class="vhead">
+                      <span class="ico"><svg><use href="#i-svc"/></svg></span>
+                      <span class="vtitle"><span class="ttl">existing booking</span></span>
+                      <span class="more"></span>
+                    </div>
+                    <div class="vdetail"><div class="vdetail-in"><p>Does the user already have a booking that collides? Idempotency keys make a double-tap safe.</p></div></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="vconn client"><span class="rail"></span><span class="lbl">templated reply — no LLM</span><span class="chev"></span></div>
+
+              <div class="vnode client">
+                <div class="vhead">
+                  <span class="ico"><svg><use href="#i-client"/></svg></span>
+                  <span class="vtitle"><span class="ttl">Confirmation, streamed back</span><span class="sub">templated · zero inference</span></span>
+                  <span class="more"></span>
+                </div>
+                <div class="vdetail"><div class="vdetail-in">
+                  <p><strong>Phrased, not generated.</strong> The reply is a template filled from the REST results — no second LLM call — so the round-trip stays fast. A <strong>guardrails layer</strong> still requires explicit confirmation before any write, even on the one-tap "book my usual" path.</p>
+                </div></div>
+              </div>
+
+            </div>
+            <div class="legend">
+              <span class="li"><span class="sw client"></span>client</span>
+              <span class="li"><span class="sw svc"></span>agent / service</span>
+              <span class="li"><span class="sw cache"></span>Redis cache</span>
+              <span class="li"><span class="sw ai"></span>LLM</span>
+            </div>
+          </figure>
+
+          <div class="grid-2">
+            <div class="card">
+              <h4>Tool layer &amp; guardrails</h4>
+              <p class="muted">
+                A custom agent loop wraps the Shuttle REST APIs as <strong>typed tool definitions</strong>. A <strong>guardrails layer</strong>
+                requires explicit user confirmation before <em>any</em> write — no silent auto-booking, even on the one-tap "book my usual" fast path.
+                Tenant identity (BUID) is injected by the auth proxy and never enters the model context; idempotency keys make a double-tap safe.
+              </p>
+            </div>
+            <div class="card">
+              <h4>Scale &amp; extend</h4>
+              <p class="muted">
+                Pods are <strong>stateless</strong> with all conversation state in <strong>Redis</strong> — horizontal scale on Kubernetes with an HPA.
+                A <strong>response simplifier</strong> keeps verbose API JSON out of the model context to cut tokens. New capabilities drop in as
+                <strong>capability packs</strong> behind an intent router. If the LLM is slow, it degrades to a zero-inference menu UX; the app is always the escape hatch.
+              </p>
+            </div>
+          </div>
+
+          <div class="tradeoff">
+            <strong>The reusable lesson:</strong> in a latency-sensitive, money-or-seat-allocating flow, don't use the LLM as the workflow engine.
+            Deterministic code for <em>what happens next</em>; the model for <em>understand this utterance</em> and <em>say it nicely</em>.
+          </div>
+
+          <div class="stackline"><b>Stack:</b> Python · FastAPI (async) · LangGraph · Claude (model-tiered) · Redis · Kubernetes + HPA · structured outputs · prompt caching · pgvector</div>
+          <div>
+            <span class="tag flag">agentic AI</span><span class="tag">FastAPI</span><span class="tag">LangGraph</span><span class="tag">Redis</span><span class="tag">Kubernetes</span>
+          </div>
+        </article>

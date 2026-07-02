@@ -1,0 +1,119 @@
+        <!-- ========== 3 · LLM operational analytics (MoveInSync) ========== -->
+        <article class="project reveal">
+          <span class="idx">03</span>
+          <h3>LLM-powered operational analytics — ask the fleet a question in English</h3>
+          <p class="role">Natural-language querying over historical trip, fleet and booking data — operational questions answered in plain English instead of hand-written reports.</p>
+          <div class="card">
+            <h4>What it does</h4>
+            <p class="muted">
+              A structured-data querying layer that turns an operations manager's plain-English question into a safe, bounded query over historical
+              trip / fleet / booking data and returns a grounded answer — so ops teams stop waiting on someone to write a bespoke report for every question.
+            </p>
+          </div>
+          <div>
+            <span class="tag">Python</span><span class="tag">LLM analytics</span><span class="tag">structured querying</span>
+          </div>
+        </article>
+
+        <!-- ========== 5 · Indoor navigation (MoveInSync) ========== -->
+        <article class="project reveal">
+          <span class="idx">04</span>
+          <h3>Indoor navigation — graph shortest-path over a building's route network</h3>
+          <p class="role">Turn-by-turn indoor routing on a graph database, serving real daily traffic with far faster path computation.</p>
+          <div class="card">
+            <h4>Approach &amp; impact</h4>
+            <p class="muted">
+              Modelled the indoor space as a graph and ran shortest-path on <strong>Memgraph</strong>, serving <strong>2,000+ route requests a day</strong>
+              and cutting path-computation time by <strong>~80%</strong> versus the prior approach.
+            </p>
+          </div>
+          <div><span class="tag">Memgraph</span><span class="tag">graph shortest-path</span><span class="tag">Python</span></div>
+        </article>
+
+        <!-- ========== 6 · Calendar service + safety/compliance (MoveInSync) ========== -->
+        <article class="project reveal">
+          <span class="idx">05</span>
+          <h3>Centralized Calendar Service, plus a safety &amp; compliance engine</h3>
+          <p class="role">Scheduling coordination for the fleet, and enforcement that keeps non-compliant vehicles and vulnerable riders off the road.</p>
+          <div class="grid-2">
+            <div class="card">
+              <h4>Centralized Calendar Service</h4>
+              <p class="muted">
+                Coordinates <strong>1,000+ vehicle/driver schedules a day</strong>, cut scheduling conflicts by <strong>~25%</strong>, and the automated
+                trip-lifecycle management on top of it was adopted by <strong>~50%</strong> of shuttle clients.
+              </p>
+            </div>
+            <div class="card">
+              <h4>Safety &amp; compliance engine</h4>
+              <p class="muted">
+                A <strong>Marshal Assignment</strong> system safeguarding lone female employees on trips, plus a <strong>compliance enforcement engine</strong>
+                that auto-blocks non-compliant vehicles and drivers.
+              </p>
+            </div>
+          </div>
+          <div><span class="tag">scheduling</span><span class="tag">safety</span><span class="tag">compliance</span><span class="tag">Python</span></div>
+        </article>
+
+        <!-- ========== 7 · Fault-tolerant banking middleware (Interface.ai) ========== -->
+        <article class="project reveal">
+          <span class="idx">06</span>
+          <span class="company">Interface.ai</span>
+          <h3>Fault-tolerant banking middleware, and observability that cut response time</h3>
+          <p class="role">Intelligent virtual-assistant platform for US banks and credit unions, integrating many third-party banking providers.</p>
+          <div class="grid-2">
+            <div class="card problem">
+              <h4>The problem</h4>
+              <p>Any one provider could be slow or down — and in banking, a flaky dependency can't take the whole assistant down with it. Incidents were also being noticed too late.</p>
+            </div>
+            <div class="card">
+              <h4>What I built</h4>
+              <p class="muted">
+                <strong>Fault-tolerant middleware</strong> so a single provider failing degraded gracefully rather than cascading, plus
+                <strong>Grafana dashboards with custom alerting</strong> that surfaced problems early and cut incident response time.
+              </p>
+            </div>
+          </div>
+          <div><span class="tag">middleware</span><span class="tag">fault tolerance</span><span class="tag">Grafana</span><span class="tag">custom alerting</span><span class="tag">Node.js</span></div>
+        </article>
+
+        <!-- ========== 8 · Event-driven webhooks & public APIs (Instamojo) ========== -->
+        <article class="project reveal">
+          <span class="idx">07</span>
+          <span class="company">Instamojo</span>
+          <h3>Event-driven webhooks &amp; public APIs — an SME commerce integration layer</h3>
+          <p class="role">The integration backbone of a commerce platform for small businesses, hardened for high-traffic sale events.</p>
+          <div class="grid-2">
+            <div class="card">
+              <h4>Event-driven webhooks</h4>
+              <p class="muted">
+                A scalable, event-driven <strong>webhooks system</strong> pushing order/payment/product events to merchants and integrators in
+                near-real-time — the critical integration layer the ecosystem was built on. Its AWS infrastructure was provisioned as code with <strong>Terraform</strong>.
+              </p>
+            </div>
+            <div class="card">
+              <h4>Public REST APIs + load testing</h4>
+              <p class="muted">
+                <strong>Public REST APIs</strong> for third-party developers, plus a comprehensive <strong>Locust</strong> load-testing framework that raised
+                reliability and throughput ahead of sale events — instead of discovering the ceiling live.
+              </p>
+            </div>
+          </div>
+          <div><span class="tag">event-driven</span><span class="tag">webhooks</span><span class="tag">REST APIs</span><span class="tag">Locust</span><span class="tag">AWS</span><span class="tag">Terraform</span></div>
+        </article>
+
+        <!-- ========== 9 · Retail replenishment pipelines (Blue Yonder) ========== -->
+        <article class="project reveal">
+          <span class="idx">08</span>
+          <span class="company">Blue Yonder</span>
+          <h3>Retail replenishment pipelines that crunch forecast data at scale</h3>
+          <p class="role">LSF (Retail Store Replenishment) — inventory planning and supply-chain pipelines for global retailers.</p>
+          <div class="card">
+            <h4>What I built</h4>
+            <p class="muted">
+              <strong>Microservices in Python and Flask on Azure</strong> interacting with complex forecast data to drive replenishment logic and client
+              interfaces across a distributed team. To keep the heavy, embarrassingly-parallel number-crunching fast enough to plan against, I used
+              <strong>Dask</strong> for parallel computing and <strong>Airflow</strong> to orchestrate the data pipelines.
+            </p>
+          </div>
+          <div><span class="tag">Python</span><span class="tag">Flask</span><span class="tag">Azure</span><span class="tag">Dask</span><span class="tag">Airflow</span></div>
+        </article>

@@ -1,0 +1,150 @@
+        <!-- ========== 09 · Graph data-lineage / PowerMe (Enquero) ========== -->
+        <article class="project reveal">
+          <span class="idx">09</span>
+          <span class="company">Enquero <span class="ctx">· acquired by Genpact</span></span>
+          <h3>Data lineage as a graph — making "where did this number come from?" answerable</h3>
+          <p class="role">Core development on <em>PowerMe</em>, an enterprise data-cataloging product, at an early-stage startup that scaled fast during my time there.</p>
+
+          <div class="grid-2">
+            <div class="card problem">
+              <h4>The problem</h4>
+              <p>
+                Enterprises couldn't trace how data flowed from creation (OLTP) to consumption (BI/OLAP). When a report looked wrong, nobody could say
+                <em>which upstream system, transformation, or table</em> was responsible — across RDBMS, NoSQL, BI tools and viz platforms.
+              </p>
+            </div>
+            <div class="card insight">
+              <h4>The insight</h4>
+              <p>Lineage isn't tabular — it's a graph. Model tables, jobs and reports as nodes and data-flow as edges, and "trace this metric to its source" becomes a graph traversal, not a pile of joins.</p>
+            </div>
+          </div>
+
+          <figure class="diagram">
+            <figcaption class="cap">lineage — data flows OLTP → transform → warehouse → dashboards, and a metadata plane indexes it into a searchable graph</figcaption>
+            <div class="diag-hint"><span class="pulse"></span> hover, tap or focus any node for detail</div>
+            <div class="panels">
+
+              <!-- Panel 1: data flow — vertical -->
+              <div class="panel p1">
+                <div class="pcap"><span class="pnum">1</span><b>Data flow</b> — how data moves from OLTP to the dashboards people read</div>
+                <div class="vflow">
+
+                  <div class="vfork db">
+                    <div class="fork-hd">sources · operational stores</div>
+                    <div class="branches">
+                      <div class="vnode db">
+                        <div class="vhead">
+                          <span class="ico"><svg class="blogo logo-pg" viewBox="0 0 24 24" role="img" aria-label="PostgreSQL"><use href="#b-postgresql"/></svg></span>
+                          <span class="vtitle"><span class="ttl">OLTP tables</span><span class="sub">relational</span></span>
+                          <span class="more"></span>
+                        </div>
+                        <div class="vdetail"><div class="vdetail-in"><p>Row-oriented transactional systems — where the numbers are born.</p></div></div>
+                      </div>
+                      <div class="vnode db">
+                        <div class="vhead">
+                          <span class="ico"><svg class="blogo logo-mongo" viewBox="0 0 24 24" role="img" aria-label="MongoDB"><use href="#b-mongodb"/></svg></span>
+                          <span class="vtitle"><span class="ttl">NoSQL stores</span><span class="sub">documents</span></span>
+                          <span class="more"></span>
+                        </div>
+                        <div class="vdetail"><div class="vdetail-in"><p>Document stores feeding the same downstream analytics.</p></div></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="vconn svc"><span class="rail"></span><span class="lbl">ETL / transform jobs</span><span class="chev"></span></div>
+
+                  <div class="vnode svc">
+                    <div class="vhead">
+                      <span class="ico"><svg><use href="#i-svc"/></svg></span>
+                      <span class="vtitle"><span class="ttl">ETL / transform</span><span class="sub">jobs</span></span>
+                      <span class="more"></span>
+                    </div>
+                    <div class="vdetail"><div class="vdetail-in"><p>Each job is a node too — so a transformation that mangles a metric becomes visible in the lineage graph.</p></div></div>
+                  </div>
+
+                  <div class="vconn db"><span class="rail"></span><span class="lbl">load</span><span class="chev"></span></div>
+
+                  <div class="vnode db">
+                    <div class="vhead">
+                      <span class="ico"><svg class="blogo logo-warehouse" viewBox="0 0 24 24" role="img" aria-label="Warehouse"><use href="#b-postgresql"/></svg></span>
+                      <span class="vtitle"><span class="ttl">Warehouse</span><span class="sub">OLAP</span></span>
+                      <span class="more"></span>
+                    </div>
+                    <div class="vdetail"><div class="vdetail-in"><p>The analytical store the dashboards query.</p></div></div>
+                  </div>
+
+                  <div class="vconn client"><span class="rail"></span><span class="lbl">read</span><span class="chev"></span></div>
+
+                  <div class="vfork client">
+                    <div class="fork-hd">consumption · what people read</div>
+                    <div class="branches">
+                      <div class="vnode client">
+                        <div class="vhead">
+                          <span class="ico"><svg><use href="#i-client"/></svg></span>
+                          <span class="vtitle"><span class="ttl">BI dashboards</span></span>
+                        </div>
+                      </div>
+                      <div class="vnode client">
+                        <div class="vhead">
+                          <span class="ico"><svg><use href="#i-client"/></svg></span>
+                          <span class="vtitle"><span class="ttl">Viz platforms</span></span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+              <!-- Panel 2: metadata plane — vertical -->
+              <div class="panel p3">
+                <div class="pcap"><span class="pnum">2</span><b>Metadata plane</b> — scans every layer and builds the searchable graph</div>
+                <div class="vflow">
+
+                  <div class="vnode queue">
+                    <div class="vhead">
+                      <span class="ico"><svg class="blogo logo-kafka" viewBox="0 0 24 24" role="img" aria-label="Apache Kafka"><use href="#b-apachekafka"/></svg></span>
+                      <span class="vtitle"><span class="ttl">Kafka ingestion</span><span class="sub">metadata stream</span></span>
+                      <span class="more"></span>
+                    </div>
+                    <div class="vdetail"><div class="vdetail-in"><p>Metadata scanned from every layer above streams in continuously.</p></div></div>
+                  </div>
+
+                  <div class="vconn geo"><span class="rail"></span><span class="lbl">builds</span><span class="chev"></span></div>
+
+                  <div class="vnode geo">
+                    <div class="vhead">
+                      <span class="ico"><svg><use href="#i-geo"/></svg></span>
+                      <span class="vtitle"><span class="ttl">JanusGraph</span><span class="sub">lineage graph</span></span>
+                      <span class="more"></span>
+                    </div>
+                    <div class="vdetail"><div class="vdetail-in"><p><strong>Where lineage lives.</strong> Tables, jobs and reports are nodes; data-flow is edges. "Trace this metric to its source" = one graph traversal.</p></div></div>
+                  </div>
+
+                  <div class="vconn geo"><span class="rail"></span><span class="lbl">index</span><span class="chev"></span></div>
+
+                  <div class="vnode svc">
+                    <div class="vhead">
+                      <span class="ico"><svg class="blogo logo-es" viewBox="0 0 24 24" role="img" aria-label="Elasticsearch"><use href="#b-elasticsearch"/></svg></span>
+                      <span class="vtitle"><span class="ttl">Elasticsearch</span><span class="sub">catalog search</span></span>
+                      <span class="more"></span>
+                    </div>
+                    <div class="vdetail"><div class="vdetail-in"><p>Free-text catalog search across every asset in the graph.</p></div></div>
+                  </div>
+
+                </div>
+                <div class="note-pill good" style="margin:14px auto 0">"trace this metric to its source" = one graph traversal</div>
+              </div>
+
+            </div>
+            <div class="legend">
+              <span class="li"><span class="sw db"></span>database</span>
+              <span class="li"><span class="sw svc"></span>service</span>
+              <span class="li"><span class="sw queue"></span>Kafka stream</span>
+              <span class="li"><span class="sw geo"></span>graph store</span>
+              <span class="li"><span class="sw client"></span>client</span>
+            </div>
+          </figure>
+
+          <div><span class="tag">Python</span><span class="tag">JanusGraph</span><span class="tag">Elasticsearch</span><span class="tag">Apache Kafka</span><span class="tag">graph modeling</span></div>
+        </article>
